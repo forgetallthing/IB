@@ -1,0 +1,10 @@
+node_modules
+.dist
+coverage
+.env
+.env.*
+!.env.example
+dist
+frontend/public/vditor
+.DS_Store
+.vscode/.ropeproject

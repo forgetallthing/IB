@@ -1,0 +1,31 @@
+{
+  "name": "@ib/backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:mem": "set DEV_USE_INMEMORY=1 && tsx watch src/index.ts",
+    "test": "vitest",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "echo \"backend lint not configured yet\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@fastify/jwt": "^8.0.0",
+    "fastify": "^4.0.0",
+    "mongoose": "^8.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.5.0",
+    "mongodb-memory-server": "^8.11.1",
+    "vitest": "^1.0.0",
+    "supertest": "^6.3.4",
+    "@types/supertest": "^2.0.12"
+  }
+}
