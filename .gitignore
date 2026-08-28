@@ -6,5 +6,6 @@ coverage
 !.env.example
 dist
 frontend/public/vditor
+logs
 .DS_Store
 .vscode/.ropeproject
