@@ -10,7 +10,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { fail } = useToast();
 const loading = ref(false);
-const form = reactive({ username: 'admin', password: 'admin123456' });
+const form = reactive({ username: '', password: '' });
 
 async function login() {
   loading.value = true;
