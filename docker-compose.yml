@@ -2,6 +2,12 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-ibadmin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-please-change-me}
+    ports:
+      # 宿主机自定义端口:容器内 27017，方便本地机器远程直连
+      - '${MONGO_PORT:-28117}:27017'
     volumes:
       - mongo-data:/data/db
 
@@ -13,7 +19,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGO_URI: mongodb://mongo:27017/interview_bank
+      MONGO_URI: mongodb://${MONGO_USER:-ibadmin}:${MONGO_PASSWORD:-please-change-me}@mongo:27017/interview_bank?authSource=admin
       # 生产环境务必通过 .env 文件或环境变量覆盖 JWT_SECRET 和管理员密码
       JWT_SECRET: ${JWT_SECRET:-please-change-me-to-a-long-random-string}
       ADMIN_SEED_USERNAME: ${ADMIN_SEED_USERNAME:-admin}
