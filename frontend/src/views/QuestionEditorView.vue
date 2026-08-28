@@ -126,7 +126,7 @@ function initContentEditor() {
   contentVditor = new Vditor(contentEditorRef.value, {
     lang: 'zh_CN',
     mode: 'ir',
-    height: 460,
+    height: 920,
     placeholder: '输入正文（支持 Markdown）',
     cache: { enable: false },
     cdn: '/vditor',
