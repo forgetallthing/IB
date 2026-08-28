@@ -20,7 +20,7 @@ RUN npm install --omit=dev --workspace @ib/backend
 
 RUN npm install -g pm2@5
 
-COPY backend/dist backend/dist
+COPY --from=build /app/backend/dist backend/dist
 
 EXPOSE 3000
 CMD ["pm2-runtime", "backend/dist/index.js", "--name", "ib-backend"]
