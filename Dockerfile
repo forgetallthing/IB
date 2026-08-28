@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY backend/package.json backend/
 COPY frontend/package.json frontend/
+COPY frontend/scripts frontend/scripts
 RUN npm install
 
 COPY . .
