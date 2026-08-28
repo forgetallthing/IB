@@ -79,8 +79,8 @@ function selectAll() {
   padding: 5px 12px 5px 8px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: #fdfbf6;
-  color: #5d5046;
+  background: #f4f8fa;
+  color: #557080;
   font-size: 13px;
   font-weight: 500;
   box-shadow: none;
@@ -90,8 +90,8 @@ function selectAll() {
 }
 
 .check-chip:hover {
-  border-color: rgba(180, 85, 30, 0.45);
-  background: rgba(180, 85, 30, 0.05);
+  border-color: rgba(13, 148, 136, 0.45);
+  background: rgba(13, 148, 136, 0.05);
   transform: none;
 }
 
@@ -116,15 +116,15 @@ function selectAll() {
 }
 
 .check-chip.on {
-  background: rgba(180, 85, 30, 0.12);
-  border-color: #c97a42;
-  color: #9a4718;
+  background: rgba(13, 148, 136, 0.12);
+  border-color: #5eaaa0;
+  color: #0f766e;
   font-weight: 600;
 }
 
 .check-chip.on .box {
-  background: var(--primary, #b4551e);
-  border-color: var(--primary, #b4551e);
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .check-chip.on .box i {
@@ -132,7 +132,7 @@ function selectAll() {
 }
 
 .check-chip:focus-visible {
-  outline: 2px solid rgba(180, 85, 30, 0.55);
+  outline: 2px solid rgba(13, 148, 136, 0.55);
   outline-offset: 2px;
 }
 </style>

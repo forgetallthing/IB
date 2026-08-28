@@ -40,6 +40,82 @@ export async function registerUserRoutes(app: FastifyInstance) {
     }));
   });
 
+  app.get('/api/users/me', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const me = request.user as { sub?: string };
+    const user = await UserModel.findById(me.sub);
+    if (!user) {
+      return reply.status(404).send({ message: 'Not found' });
+    }
+
+    return {
+      id: String(user._id),
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    };
+  });
+
+  app.patch('/api/users/me', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const me = request.user as { sub?: string };
+    const body = request.body as {
+      username?: string;
+      email?: string;
+      password?: string;
+      currentPassword?: string;
+    };
+
+    const user = await UserModel.findById(me.sub);
+    if (!user) {
+      return reply.status(404).send({ message: 'Not found' });
+    }
+
+    if (body.username) {
+      user.username = body.username.trim();
+    }
+
+    if (body.email !== undefined) {
+      user.email = body.email || null;
+    }
+
+    if (body.password) {
+      if (!body.currentPassword || user.passwordHash !== hashPassword(body.currentPassword)) {
+        return reply.status(400).send({ message: '当前密码不正确' });
+      }
+      user.passwordHash = hashPassword(body.password);
+    }
+
+    try {
+      await user.save();
+    } catch (error) {
+      const code = (error as { code?: number }).code;
+      if (code === 11000) {
+        return reply.status(409).send({ message: '用户名或邮箱已被占用' });
+      }
+      throw error;
+    }
+
+    return {
+      id: String(user._id),
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    };
+  });
+
   app.post('/api/users', async (request, reply) => {
     const rejected = await requireAdmin(request, reply);
     if (rejected) return rejected;

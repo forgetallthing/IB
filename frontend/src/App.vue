@@ -17,9 +17,7 @@
       <nav class="nav-links">
         <RouterLink to="/questions" @click="closeMenu">笔记中心</RouterLink>
         <RouterLink to="/questions/edit" @click="closeMenu">笔记编辑</RouterLink>
-        <RouterLink to="/questions/io" @click="closeMenu">导入导出</RouterLink>
-        <RouterLink v-if="isAdmin" to="/settings" @click="closeMenu">设置</RouterLink>
-        <button class="nav-button" type="button" @click="logout">退出登录</button>
+        <RouterLink to="/settings" @click="closeMenu">设置</RouterLink>
       </nav>
     </aside>
 
@@ -31,30 +29,22 @@
   </div>
 
   <ConfirmDialog />
+  <ToastHost />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import ConfirmDialog from './components/ConfirmDialog.vue';
-import { useAuthStore } from './stores/auth';
+import ToastHost from './components/ToastHost.vue';
 
 const route = useRoute();
-const router = useRouter();
-const authStore = useAuthStore();
 const menuOpen = ref(false);
 
 const isLoginPage = computed(() => route.path === '/login');
-const isAdmin = computed(() => authStore.user?.role === 'admin');
 
 function closeMenu() {
   menuOpen.value = false;
-}
-
-function logout() {
-  authStore.clearSession();
-  closeMenu();
-  router.replace('/login');
 }
 
 watch(
@@ -92,7 +82,7 @@ watch(
   position: sticky;
   top: 0;
   height: 100vh;
-  background: rgba(255, 252, 245, 0.72);
+  background: rgba(240, 248, 250, 0.75);
   backdrop-filter: blur(12px);
 }
 
@@ -113,12 +103,12 @@ watch(
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #2b231d 0%, #5c4633 60%, #b4551e 120%);
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 60%, #14b8a6 120%);
   color: #fff;
   font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.02em;
-  box-shadow: 0 8px 18px rgba(64, 48, 32, 0.25);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.25);
   margin-bottom: 6px;
 }
 
@@ -155,7 +145,7 @@ h1 {
   border-radius: 12px;
   background: transparent;
   border: 1px solid transparent;
-  color: #5d5046;
+  color: #557080;
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
@@ -163,32 +153,20 @@ h1 {
 }
 
 .nav-links a:hover {
-  background: rgba(180, 85, 30, 0.08);
+  background: rgba(13, 148, 136, 0.08);
   color: var(--ink);
 }
 
 /* 路由前缀命中（如 /questions 包含 /questions/edit）给浅色态，精确命中才高亮深色 */
 .nav-links a.router-link-active {
-  background: rgba(43, 35, 29, 0.07);
+  background: rgba(15, 42, 58, 0.07);
   color: var(--ink);
 }
 
 .nav-links a.router-link-exact-active {
   background: var(--primary);
   color: #fff;
-  box-shadow: 0 8px 18px rgba(154, 67, 26, 0.28);
-}
-
-.nav-button {
-  padding: 11px 16px;
-  background: var(--surface-tint);
-  color: var(--ink);
-  border-color: var(--line);
-}
-
-.nav-button:hover:not(:disabled) {
-  background: #efe5d3;
-  box-shadow: 0 8px 18px rgba(64, 48, 32, 0.12);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.28);
 }
 
 .app-main {
@@ -215,7 +193,7 @@ h1 {
     z-index: 30;
     border-radius: 999px;
     padding: 14px 20px;
-    box-shadow: 0 12px 32px rgba(31, 26, 23, 0.28);
+    box-shadow: 0 12px 32px rgba(15, 42, 58, 0.28);
   }
 
   .sidebar {
@@ -225,12 +203,12 @@ h1 {
     transform: translateX(-110%);
     transition: transform 0.22s ease;
     z-index: 20;
-    background: rgba(255, 252, 245, 0.97);
+    background: rgba(240, 248, 250, 0.97);
   }
 
   .sidebar.open {
     transform: translateX(0);
-    box-shadow: 24px 0 48px rgba(31, 26, 23, 0.18);
+    box-shadow: 24px 0 48px rgba(15, 42, 58, 0.18);
   }
 
   .app-main {

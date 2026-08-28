@@ -57,7 +57,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(30, 24, 18, 0.4);
+  background: rgba(15, 30, 40, 0.4);
   backdrop-filter: blur(6px);
 }
 
@@ -65,9 +65,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   width: min(400px, 100%);
   padding: 28px 26px 22px;
   border-radius: 20px;
-  background: var(--surface, #fffdf8);
-  border: 1px solid var(--line-soft, #ece2d2);
-  box-shadow: 0 24px 64px rgba(31, 26, 23, 0.28);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  box-shadow: 0 24px 64px rgba(15, 30, 40, 0.28);
   text-align: center;
 }
 
@@ -80,8 +80,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
   border-radius: 50%;
   font-size: 22px;
   font-weight: 700;
-  color: #b4551e;
-  background: rgba(180, 85, 30, 0.12);
+  color: #0d9488;
+  background: rgba(13, 148, 136, 0.12);
 }
 
 .confirm-icon.danger {
@@ -97,7 +97,7 @@ h3 {
 
 p {
   margin: 0;
-  color: #5d5046;
+  color: #557080;
   font-size: 14px;
   line-height: 1.65;
 }
@@ -122,19 +122,19 @@ p {
 
 .btn-cancel {
   background: transparent;
-  border: 1px solid var(--line, #ded3c0);
-  color: var(--ink, #2b231d);
+  border: 1px solid var(--line);
+  color: var(--ink);
 }
 
 .btn-cancel:hover {
-  background: rgba(43, 35, 29, 0.06);
+  background: rgba(15, 42, 58, 0.06);
 }
 
 .btn-primary {
-  background: var(--primary, #2b231d);
+  background: var(--primary);
   color: #fff;
   border: none;
-  box-shadow: 0 8px 18px rgba(25, 20, 16, 0.22);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.22);
 }
 
 .btn-primary:hover {
@@ -156,7 +156,7 @@ p {
 .btn-cancel:focus-visible,
 .btn-danger:focus-visible,
 .btn-primary:focus-visible {
-  outline: 2px solid rgba(180, 85, 30, 0.55);
+  outline: 2px solid rgba(13, 148, 136, 0.55);
   outline-offset: 2px;
 }
 

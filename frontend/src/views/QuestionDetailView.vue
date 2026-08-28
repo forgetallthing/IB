@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { marked } from 'marked';
 import { request } from '../api';
 import { showConfirm } from '../composables/useConfirm';
+import { useToast } from '../composables/useToast';
 
 marked.setOptions({ gfm: true, breaks: true });
 
@@ -23,7 +24,7 @@ interface QuestionItem {
 const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
-const errorMessage = ref('');
+const { fail } = useToast();
 const item = ref<QuestionItem | null>(null);
 
 const difficultyLabels = { easy: '简单', medium: '中等', hard: '困难' } as const;
@@ -32,11 +33,10 @@ const contentHtml = computed(() => (item.value ? (marked.parse(item.value.conten
 
 async function loadDetail() {
   loading.value = true;
-  errorMessage.value = '';
   try {
     item.value = await request<QuestionItem>(`/questions/${route.params.id}`);
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '加载详情失败';
+    fail(error instanceof Error ? error.message : '加载详情失败');
   } finally {
     loading.value = false;
   }
@@ -68,8 +68,7 @@ onMounted(loadDetail);
       </div>
     </div>
 
-    <p v-if="loading">详情加载中…</p>
-    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+    <p v-if="loading" class="loading">详情加载中…</p>
 
     <article v-if="item" class="panel">
       <div class="detail-head">

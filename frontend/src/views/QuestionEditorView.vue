@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
+import { useToast } from '../composables/useToast';
 
 interface QuestionItem {
   id: string;
@@ -31,8 +32,6 @@ const loading = ref(false);
 const saving = ref(false);
 const loadingTags = ref(false);
 const analyzing = ref(false);
-const message = ref('');
-const errorMessage = ref('');
 const tags = ref<TagItem[]>([]);
 
 const titleEditorRef = ref<HTMLDivElement | null>(null);
@@ -70,15 +69,7 @@ const visibilityOptions = [
   { label: '私有', value: 'private' },
 ] as const;
 
-function notice(text: string) {
-  message.value = text;
-  errorMessage.value = '';
-}
-
-function fail(text: string) {
-  errorMessage.value = text;
-  message.value = '';
-}
+const { notice, fail } = useToast();
 
 function setTitleContent(value: string) {
   if (titleReady && titleVditor) {
@@ -211,11 +202,10 @@ async function save() {
       await request(`/questions/${form.id}`, { method: 'PUT', body: JSON.stringify(payload) });
       notice('笔记已更新');
     } else {
-      await request('/questions', { method: 'POST', body: JSON.stringify(payload) });
-      notice('笔记已创建');
+      const result = await request<{ id: string }>('/questions', { method: 'POST', body: JSON.stringify(payload) });
+      form.id = result.id;
+      notice('笔记已创建，可继续编辑');
     }
-
-    setTimeout(() => router.push('/questions'), 300);
   } catch (error) {
     fail(error instanceof Error ? error.message : '保存失败');
   } finally {
@@ -284,9 +274,7 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <p v-if="loading">笔记加载中…</p>
-    <p v-if="message" class="success">{{ message }}</p>
-    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+    <p v-if="loading" class="loading">笔记加载中…</p>
 
     <section class="panel meta-panel">
       <div class="field">
@@ -345,10 +333,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.meta-panel,
+.meta-panel {
+  display: grid;
+  gap: 20px;
+}
+
 .editor-panel {
   display: grid;
-  gap: 16px;
+  gap: 24px;
 }
 
 .field {
@@ -357,9 +349,9 @@ onBeforeUnmount(() => {
 }
 
 .field-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #6d5b4d;
+  color: #557080;
 }
 
 .tag-grid,
@@ -373,25 +365,35 @@ onBeforeUnmount(() => {
 .choice-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
+  gap: 6px;
+  padding: 6px 12px;
   border: 1px solid var(--line-soft);
   border-radius: 999px;
   background: var(--surface-tint);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: border-color 0.16s ease, background 0.16s ease;
 }
 
 .tag-option:hover,
 .choice-item:hover {
-  border-color: rgba(38, 30, 24, 0.24);
+  border-color: rgba(26, 43, 58, 0.24);
 }
 
 .tag-option:has(input:checked),
 .choice-item:has(input:checked) {
-  border-color: rgba(180, 85, 30, 0.55);
-  background: #fdf2e4;
+  border-color: rgba(13, 148, 136, 0.55);
+  background: #e3eef3;
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.content-field {
+  margin-top: 4px;
 }
 
 .title-editor :deep(.vditor),
@@ -403,10 +405,24 @@ onBeforeUnmount(() => {
 .ai-box {
   padding: 14px 16px;
   border-radius: var(--radius-md);
-  background: #f7efe1;
+  background: #e0eaf0;
 }
 
 .ai-box p {
-  margin: 6px 0;
+  margin: 5px 0;
+}
+
+.ai-box strong {
+  font-size: 13px;
+}
+
+.ai-box button {
+  margin-top: 6px;
+}
+
+@media (max-width: 700px) {
+  .choice-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

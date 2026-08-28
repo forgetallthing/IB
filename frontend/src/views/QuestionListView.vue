@@ -129,7 +129,7 @@ watch([query, difficulty, visibility, tag], loadItems);
       <FilterCheckGroup v-model="tag" label="标签" :options="tagOptions" />
     </section>
 
-    <p v-if="loading">加载中…</p>
+    <p v-if="loading" class="loading">加载中…</p>
 
     <div class="list">
       <article v-for="item in items" :key="item.id" class="card">
@@ -149,12 +149,12 @@ watch([query, difficulty, visibility, tag], loadItems);
           <div class="collapse-inner">
             <!-- eslint-disable-next-line vue/no-v-html -->
             <div class="md-content" v-html="item.contentHtml"></div>
+            <div class="card-actions">
+              <button type="button" class="text-btn" @click="editQuestion(item.id)">编辑</button>
+              <span class="sep">·</span>
+              <button type="button" class="text-btn danger-text" @click="deleteQuestion(item.id)">删除</button>
+            </div>
           </div>
-        </div>
-
-        <div class="card-actions">
-          <button type="button" class="secondary" @click="editQuestion(item.id)">编辑</button>
-          <button type="button" class="danger" @click="deleteQuestion(item.id)">删除</button>
         </div>
       </article>
     </div>
@@ -176,7 +176,7 @@ watch([query, difficulty, visibility, tag], loadItems);
 .filter-row input {
   flex: 1;
   min-width: 0;
-  background: #fdfbf6;
+  background: #f4f8fa;
 }
 
 .filter-panel > :not(.filter-row) {
@@ -214,8 +214,14 @@ watch([query, difficulty, visibility, tag], loadItems);
   color: inherit;
 }
 
+.card-head:hover {
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+
 .card-head:focus-visible {
-  outline: 2px solid rgba(180, 85, 30, 0.55);
+  outline: 2px solid rgba(13, 148, 136, 0.55);
   outline-offset: 4px;
   border-radius: 8px;
 }
@@ -235,7 +241,7 @@ watch([query, difficulty, visibility, tag], loadItems);
 
 .chevron.open {
   transform: rotate(-180deg);
-  background: rgba(180, 85, 30, 0.14);
+  background: rgba(13, 148, 136, 0.14);
   color: var(--accent);
 }
 
@@ -273,7 +279,7 @@ watch([query, difficulty, visibility, tag], loadItems);
 }
 
 .md-content {
-  color: #4a3e34;
+  color: #4a5b6a;
   font-size: 14px;
   line-height: 1.75;
 }
@@ -288,7 +294,37 @@ watch([query, difficulty, visibility, tag], loadItems);
 
 .card-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.text-btn {
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.text-btn:hover {
+  background: none;
+  transform: none;
+  box-shadow: none;
+  color: var(--accent);
+}
+
+.text-btn.danger-text:hover {
+  color: var(--danger);
+}
+
+.sep {
+  color: var(--line);
+  font-size: 12px;
 }
 </style>
