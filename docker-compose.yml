@@ -34,6 +34,11 @@ services:
     restart: unless-stopped
     ports:
       - '80:80'
+      - '443:443'
+    volumes:
+      # nginx 配置和 SSL 证书用挂载方式，更新配置无需重新构建镜像
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
     depends_on:
       - backend
 
