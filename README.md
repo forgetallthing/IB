@@ -36,6 +36,8 @@ IB/
 ├── docker/nginx.conf       # nginx 配置（HTTPS + SPA 回退 + /api 反代）
 ├── Dockerfile              # 多阶段构建（build → backend → web）
 ├── docker-compose.yml      # 三容器编排
+├── deploy.bat              # 本地一键打包（Windows）
+├── deploy/                 # 服务器自动部署监听（zip-watch.sh + systemd 服务）
 └── ecosystem.config.cjs    # 裸机 pm2 部署配置
 ```
 
@@ -117,13 +119,62 @@ pm2 save && pm2 startup
 
 前端静态文件可用 `pm2 serve frontend/dist 8080 --spa` 或 nginx 托管（`/api` 反代到 3000 端口）。
 
-## 日常更新
+## 部署方案（zip + FTPS + 自动监听）
+
+当前生产环境采用的流程：服务器无法直连 GitHub，通过 SFTP 传包 + 服务器端监听自动部署。
+
+### 日常更新（三步）
+
+```
+1. 双击 deploy.bat                     # 本地打包已提交代码为 ib.zip
+2. Xftp 上传 ib.zip 到服务器 /web/      # 覆盖旧包
+3. 完成                                # 服务器 5 秒内自动检测并部署
+```
+
+> 重要：`deploy.bat` 只打包 **git 已提交** 的代码（`git archive HEAD`）。手动改过的文件必须先 commit，否则不会进包。
+
+### 服务器端组件（一次性安装）
+
+服务器项目位于 `/web/IB`，包含两个脚本：
+
+**update.sh**（部署动作：解压 + 重建容器）：
 
 ```bash
-git pull && npm install && npm run build   # 裸机
-# 或
-git pull && docker compose up -d --build   # Docker
+cat > /web/IB/update.sh <<'EOF'
+#!/bin/bash
+set -e
+cd /web/IB
+if [ -f /web/ib.zip ]; then
+  unzip -o /web/ib.zip -d /web/IB
+fi
+docker compose up -d --build
+docker image prune -f
+docker compose ps
+EOF
+chmod +x /web/IB/update.sh
 ```
+
+**zip-watch.sh 监听服务**（检测到新包自动执行 update.sh，仓库 `deploy/` 目录里有同样内容）：
+
+```bash
+# 脚本由仓库 zip 自动带上，只需安装 systemd 服务：
+cp /web/IB/deploy/ib-deploy.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now ib-deploy      # 开机自启 + 立即运行
+journalctl -u ib-deploy -f            # 查看监听日志
+```
+
+正常状态是**完全安静**（每 5 秒检查一次 zip，无变化不输出）；上传新包后 5 秒内出现 `detected new package, deploying → deploy OK`。
+
+### 注意事项
+
+- `.env`、`docker/certs/` 不在 git 仓库中，解压覆盖**不会**影响它们
+- `.gitattributes` 强制 `*.sh`/`*.service` 使用 LF 换行，避免 Windows CRLF 导致 Linux 上脚本报错（`$'\r': command not found`）；若从其他途径上传脚本后报此错，执行 `sed -i 's/\r$//' 脚本路径` 修复
+- 部署失败时监听服务不会对同一个包反复重试，修复后上传新包即重新触发
+
+### Docker 首次部署 / HTTPS 配置
+
+首次在服务器安装及 SSL 证书配置见下文「Docker 部署（推荐）」与「HTTPS 配置」章节。
 
 ## 默认账号
 
