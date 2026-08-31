@@ -1,0 +1,11 @@
+[Unit]
+Description=IB auto deploy watcher (ib.zip)
+After=network.target docker.service
+
+[Service]
+ExecStart=/bin/bash /web/IB/deploy/zip-watch.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
