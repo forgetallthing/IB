@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { marked } from 'marked';
 import { request } from '../api';
@@ -58,11 +58,15 @@ function mdToHtml(md: string) {
 }
 
 async function loadTagOptions() {
-  const result = await request<Array<{ id: string; name: string; active: boolean }>>('/tags');
+  const result = await request<Array<{ id: string; name: string; active: boolean; color?: string }>>('/tags');
   tagOptions.value = result
     .filter((item) => item.active)
-    .map((item) => ({ value: item.name, label: item.name }));
+    .map((item) => ({ value: item.name, label: item.name, color: item.color }));
 }
+
+const tagColorMap = computed<Record<string, string>>(() =>
+  Object.fromEntries(tagOptions.value.map((option) => [option.value, option.color ?? ''])),
+);
 
 async function loadItems() {
   loading.value = true;
@@ -138,7 +142,9 @@ watch([query, difficulty, visibility, tag], loadItems);
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div class="md-title" v-html="item.titleHtml"></div>
           <span class="head-pills">
-            <span v-for="tagName in item.tags" :key="tagName" class="tag">#{{ tagName }}</span>
+            <span v-for="tagName in item.tags" :key="tagName" class="tag">
+              <i v-if="tagColorMap[tagName]" class="tag-dot" :style="{ backgroundColor: tagColorMap[tagName] }"></i>{{ tagName }}
+            </span>
             <span class="pill" :class="`difficulty-${item.difficulty}`">{{ difficultyLabels[item.difficulty] }}</span>
           </span>
         </button>
@@ -181,6 +187,10 @@ watch([query, difficulty, visibility, tag], loadItems);
 
 .filter-panel > :not(.filter-row) {
   padding-top: 2px;
+}
+
+.tag {
+  gap: 5px;
 }
 
 .list {

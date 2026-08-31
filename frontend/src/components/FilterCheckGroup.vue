@@ -2,6 +2,7 @@
 export interface CheckOption {
   value: string;
   label: string;
+  color?: string;
 }
 
 const props = defineProps<{
@@ -44,7 +45,7 @@ function selectAll() {
         :class="{ on: modelValue.includes(option.value) }"
         @click="toggle(option.value)"
       >
-        <span class="box"><i>✓</i></span>{{ option.label }}
+        <span class="box"><i>✓</i></span><i v-if="option.color" class="tag-dot" :style="{ backgroundColor: option.color }"></i>{{ option.label }}
       </button>
     </div>
   </div>
