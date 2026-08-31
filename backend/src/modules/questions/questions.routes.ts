@@ -10,6 +10,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       creatorId?: string;
       creatorName?: string;
       visibility?: 'public' | 'private' | Array<'public' | 'private'>;
+      page?: string;
+      limit?: string;
     };
 
     const filter: Record<string, unknown> = {};
@@ -37,7 +39,14 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       filter.tags = Array.isArray(query.tags) ? { $in: query.tags } : { $in: [query.tags] };
     }
 
-    const items = await QuestionModel.find(filter).sort({ updatedAt: -1 }).lean();
+    // 分页：page 从 1 开始，limit 默认 20、上限 100
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
+
+    const [items, total] = await Promise.all([
+      QuestionModel.find(filter).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      QuestionModel.countDocuments(filter),
+    ]);
     return {
       items: (items as Array<{
         _id: unknown;
@@ -72,7 +81,10 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       })),
-      total: items.length,
+      total,
+      page,
+      limit,
+      hasMore: page * limit < total,
     };
   });
 
@@ -165,9 +177,9 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     if (!existing) return reply.status(404).send({ message: 'Not found' });
 
     const user = request.user as { sub?: string; username?: string; role?: string } | null;
-    // only admin or owner
+    // 仅管理员或创建者可维护
     if (user?.role !== 'admin' && String(existing.creatorId) !== String(user?.sub)) {
-      return reply.status(403).send({ message: 'Forbidden' });
+      return reply.status(403).send({ message: '仅创建者或管理员可以维护该笔记' });
     }
 
     if (body.title !== undefined) existing.title = body.title;
@@ -193,7 +205,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
 
     const user = request.user as { sub?: string; role?: string } | null;
     if (user?.role !== 'admin' && String(existing.creatorId) !== String(user?.sub)) {
-      return reply.status(403).send({ message: 'Forbidden' });
+      return reply.status(403).send({ message: '仅创建者或管理员可以维护该笔记' });
     }
 
     await existing.deleteOne();

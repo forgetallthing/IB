@@ -40,4 +40,18 @@ router.beforeEach((to) => {
   return true;
 });
 
+// 全站 http(s) 链接统一用新标签页打开（含 Vditor 渲染出的链接）
+document.addEventListener(
+  'click',
+  (event) => {
+    const anchor = (event.target as HTMLElement | null)?.closest?.('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href') ?? '';
+    if (!/^https?:\/\//i.test(href)) return;
+    anchor.setAttribute('target', '_blank');
+    anchor.setAttribute('rel', 'noopener noreferrer');
+  },
+  true,
+);
+
 createApp(App).use(pinia).use(router).mount('#app');

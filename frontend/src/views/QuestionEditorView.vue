@@ -5,6 +5,7 @@ import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
 import { useToast } from '../composables/useToast';
+import { useAuthStore } from '../stores/auth';
 
 interface QuestionItem {
   id: string;
@@ -12,6 +13,7 @@ interface QuestionItem {
   content: string;
   tags: string[];
   difficulty: 'easy' | 'medium' | 'hard';
+  creatorId: string;
   creatorName: string;
   visibility: 'public' | 'private';
   aiSummary?: string;
@@ -28,6 +30,7 @@ interface TagItem {
 
 const route = useRoute();
 const router = useRouter();
+const auth = useAuthStore();
 const loading = ref(false);
 const saving = ref(false);
 const loadingTags = ref(false);
@@ -107,6 +110,7 @@ function initTitleEditor() {
     placeholder: '输入标题（支持 Markdown）',
     cache: { enable: false },
     cdn: '/vditor',
+    link: { isOpen: true },
     value: form.title,
     input: (value) => {
       form.title = value.trim();
@@ -130,6 +134,7 @@ function initContentEditor() {
     placeholder: '输入正文（支持 Markdown）',
     cache: { enable: false },
     cdn: '/vditor',
+    link: { isOpen: true },
     value: form.content,
     input: (value) => {
       form.content = value;
@@ -159,6 +164,12 @@ async function loadQuestion(id: string) {
   loading.value = true;
   try {
     const item = await request<QuestionItem>(`/questions/${id}`);
+    // 管理员可维护所有用户的笔记，普通用户只能维护自己创建的
+    if (auth.user?.role !== 'admin' && item.creatorId !== auth.user?.id) {
+      fail('仅创建者或管理员可以维护该笔记');
+      router.push('/questions');
+      return;
+    }
     form.id = item.id;
     form.title = item.title;
     setTitleContent(item.title);
