@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
   <section class="page">
     <header class="page-header">
       <div>
-        <h1>笔记编辑12</h1>
+        <h1>笔记编辑</h1>
         <p class="subtitle">编辑标题、正文、标签、难度和可见性。</p>
       </div>
       <div class="header-actions">
