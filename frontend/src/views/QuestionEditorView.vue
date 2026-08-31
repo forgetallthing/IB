@@ -282,7 +282,8 @@ onBeforeUnmount(() => {
         <div class="tag-grid">
           <label v-for="tag in tags" :key="tag.id" class="tag-option">
             <input v-model="form.selectedTagIds" type="checkbox" :value="tag.id" />
-            <span class="tag-chip" :style="{ backgroundColor: tag.color }">{{ tag.name }}</span>
+            <span class="tag-dot" :style="{ backgroundColor: tag.color }"></span>
+            <span>{{ tag.name }}</span>
           </label>
         </div>
       </div>
@@ -378,6 +379,14 @@ onBeforeUnmount(() => {
 .tag-option:hover,
 .choice-item:hover {
   border-color: rgba(26, 43, 58, 0.24);
+}
+
+.tag-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(26, 43, 58, 0.18);
 }
 
 .tag-option:has(input:checked),
