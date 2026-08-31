@@ -210,18 +210,79 @@ async function deleteTag(tag: TagItem) {
   await loadTags();
 }
 
-async function saveTag(tag: TagItem) {
-  const name = prompt('标签名', tag.name);
-  if (name === null) return;
-  const color = prompt('标签颜色', tag.color) ?? tag.color;
-  const description = prompt('标签描述', tag.description) ?? tag.description;
-  const displayOrder = Number(prompt('显示顺序', String(tag.displayOrder)) ?? tag.displayOrder);
+const editingTag = ref<TagItem | null>(null);
+const editForm = reactive({ name: '', color: '#e3eef3', description: '', displayOrder: 0 });
+const dragIndex = ref<number | null>(null);
+const overIndex = ref<number | null>(null);
 
-  await request(`/tags/${tag.id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ name, color, description, displayOrder }),
-  });
-  await loadTags();
+function openEdit(tag: TagItem) {
+  editingTag.value = tag;
+  editForm.name = tag.name;
+  editForm.color = tag.color;
+  editForm.description = tag.description;
+  editForm.displayOrder = tag.displayOrder;
+}
+
+function closeEdit() {
+  editingTag.value = null;
+}
+
+async function saveEdit() {
+  if (!editingTag.value) return;
+  if (!editForm.name.trim()) {
+    fail('标签名不能为空');
+    return;
+  }
+  try {
+    await request(`/tags/${editingTag.value.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ...editForm }),
+    });
+    notice('标签已更新');
+    closeEdit();
+    await loadTags();
+  } catch (error) {
+    fail(error instanceof Error ? error.message : '保存失败');
+  }
+}
+
+function onDragStart(index: number) {
+  dragIndex.value = index;
+}
+
+function onDragOver(index: number) {
+  overIndex.value = index;
+}
+
+function onDragEnd() {
+  dragIndex.value = null;
+  overIndex.value = null;
+}
+
+async function onDrop(targetIndex: number) {
+  const from = dragIndex.value;
+  onDragEnd();
+  if (from === null || from === targetIndex) return;
+
+  const list = [...tags.value];
+  const [moved] = list.splice(from, 1);
+  list.splice(targetIndex, 0, moved);
+  tags.value = list.map((tag, idx) => ({ ...tag, displayOrder: idx + 1 }));
+
+  try {
+    await Promise.all(
+      tags.value.map((tag) =>
+        request(`/tags/${tag.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ displayOrder: tag.displayOrder }),
+        }),
+      ),
+    );
+    notice('排序已保存');
+  } catch (error) {
+    fail(error instanceof Error ? error.message : '排序保存失败');
+    await loadTags();
+  }
 }
 
 onMounted(refresh);
@@ -318,21 +379,36 @@ onMounted(refresh);
       <h2>新增标签</h2>
       <div class="form-grid">
         <input v-model="tagForm.name" placeholder="标签名" />
-        <input v-model="tagForm.color" placeholder="#e3eef3" />
+        <input v-model="tagForm.color" type="color" />
         <input v-model="tagForm.description" placeholder="标签描述" />
         <input v-model="tagForm.displayOrder" type="number" placeholder="顺序" />
       </div>
       <button type="button" @click="createTag">创建标签</button>
 
       <h2>标签列表</h2>
+      <p class="drag-hint">拖动 ⠿ 调整顺序，松开自动保存。</p>
       <div class="list">
-        <div v-for="tag in tags" :key="tag.id" class="row">
-          <div>
-            <strong>{{ tag.name }}</strong>
-            <p>{{ tag.description || '无描述' }} · 顺序 {{ tag.displayOrder }}</p>
+        <div
+          v-for="(tag, index) in tags"
+          :key="tag.id"
+          class="row tag-row"
+          :class="{ dragging: dragIndex === index, 'drop-before': overIndex === index && dragIndex !== null && dragIndex !== index }"
+          draggable="true"
+          @dragstart="onDragStart(index)"
+          @dragover.prevent="onDragOver(index)"
+          @drop.prevent="onDrop(index)"
+          @dragend="onDragEnd"
+        >
+          <div class="tag-main">
+            <span class="grip">⠿</span>
+            <span class="tag-dot" :style="{ backgroundColor: tag.color }"></span>
+            <div>
+              <strong>{{ tag.name }}</strong>
+              <p>{{ tag.description || '无描述' }} · 顺序 {{ tag.displayOrder }}<span v-if="!tag.active"> · 已停用</span></p>
+            </div>
           </div>
           <div class="actions">
-            <button class="secondary" @click="saveTag(tag)">编辑</button>
+            <button class="secondary" @click="openEdit(tag)">编辑</button>
             <button class="secondary" @click="toggleTag(tag)">{{ tag.active ? '停用' : '启用' }}</button>
             <button class="danger" @click="deleteTag(tag)">删除</button>
           </div>
@@ -353,6 +429,34 @@ onMounted(refresh);
       </div>
       <textarea v-model="importText" rows="14" placeholder='粘贴 {"items": [...] }'></textarea>
     </article>
+
+    <div v-if="editingTag" class="modal-overlay" @click.self="closeEdit">
+      <div class="modal-card">
+        <h2>编辑标签</h2>
+        <div class="form-grid">
+          <label class="field-item">
+            <span>标签名</span>
+            <input v-model="editForm.name" placeholder="标签名" />
+          </label>
+          <label class="field-item">
+            <span>颜色</span>
+            <input v-model="editForm.color" type="color" />
+          </label>
+          <label class="field-item">
+            <span>描述</span>
+            <input v-model="editForm.description" placeholder="标签描述" />
+          </label>
+          <label class="field-item">
+            <span>顺序</span>
+            <input v-model.number="editForm.displayOrder" type="number" placeholder="顺序" />
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary" type="button" @click="closeEdit">取消</button>
+          <button type="button" @click="saveEdit">保存</button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -469,6 +573,102 @@ h2 + .list {
 @media (max-width: 900px) {
   .form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.drag-hint {
+  margin: -6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tag-row {
+  cursor: grab;
+}
+
+.tag-row.dragging {
+  opacity: 0.45;
+}
+
+.tag-row.drop-before {
+  box-shadow: 0 -3px 0 0 var(--primary);
+}
+
+.tag-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tag-main strong {
+  font-size: 14px;
+}
+
+.grip {
+  color: var(--muted);
+  font-size: 14px;
+  letter-spacing: -1px;
+  cursor: grab;
+  user-select: none;
+}
+
+.tag-dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(26, 43, 58, 0.18);
+}
+
+input[type='color'] {
+  padding: 3px;
+  height: 38px;
+  cursor: pointer;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 42, 58, 0.45);
+  backdrop-filter: blur(3px);
+  animation: overlay-in 0.16s ease;
+}
+
+.modal-card {
+  width: min(480px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(15, 42, 58, 0.28);
+  animation: modal-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 </style>
