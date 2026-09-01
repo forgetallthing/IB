@@ -1,0 +1,87 @@
+@use '@/styles/variables.scss' as *;
+
+.mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  width: 560rpx;
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-xl $spacing-lg $spacing-lg;
+  box-shadow: $shadow-popup;
+}
+
+.title {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+}
+
+.content {
+  display: block;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  text-align: center;
+  margin-top: $spacing-md;
+  line-height: $line-height-normal;
+}
+
+.footer {
+  display: flex;
+  margin-top: $spacing-xl;
+  gap: $spacing-md;
+}
+
+.button {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+.cancel {
+  background-color: $color-bg-tag;
+}
+
+.cancelText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+}
+
+.confirmBtn {
+  background-color: $color-primary;
+}
+
+.confirmText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+}
+
+.dangerBtn {
+  background-color: $color-error;
+}
+
+.dangerText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+}

@@ -1,0 +1,263 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: $spacing-lg $page-padding $page-spacing;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: $button-height-md;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  margin-bottom: $spacing-lg;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.addBtnText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+}
+
+.tagCard {
+  display: flex;
+  align-items: center;
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+/* 排序手柄 */
+.orderCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+}
+
+.orderBtn {
+  width: 52rpx;
+  height: 44rpx;
+  border-radius: $radius-sm;
+  background-color: $color-bg-tag;
+  color: $color-text-secondary;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.orderBtnDisabled {
+  opacity: 0.3;
+}
+
+.orderNum {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+/* 信息区 */
+.infoCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+}
+
+.colorDot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: $radius-round;
+  margin-right: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.tagName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.tagDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+/* 编辑/删除按钮 */
+.editCol {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: $spacing-md;
+}
+
+.miniBtn {
+  height: 52rpx;
+  padding: 0 20rpx;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.btnEdit {
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  color: $color-primary-dark;
+  background-color: rgba(13, 148, 136, 0.05);
+}
+
+.btnDelete {
+  border: 1px solid rgba(245, 63, 63, 0.35);
+  color: $color-error;
+  background-color: rgba(245, 63, 63, 0.05);
+  margin-left: $spacing-sm;
+}
+
+/* 弹窗 */
+.mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  width: 620rpx;
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-popup;
+}
+
+.modalTitle {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+}
+
+.modalField {
+  margin-top: $spacing-md;
+}
+
+.modalLabel {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+}
+
+.modalInput {
+  height: 80rpx;
+  padding: 0 $spacing-md;
+  background-color: $color-bg-tag;
+  border-radius: $radius-sm;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.modalTextarea {
+  width: 100%;
+  height: 120rpx;
+  padding: $spacing-sm $spacing-md;
+  background-color: $color-bg-tag;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+/* 色板 */
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+}
+
+.swatch {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid transparent;
+  transition: all $transition-fast;
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.swatchActive {
+  border-color: $color-text-primary;
+  transform: scale(1.08);
+}
+
+.modalFooter {
+  display: flex;
+  margin-top: $spacing-xl;
+  gap: $spacing-md;
+}
+
+.modalBtn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.modalCancel {
+  background-color: $color-bg-tag;
+}
+
+.modalCancelText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+}
+
+.modalOk {
+  background-color: $color-primary;
+}
+
+.modalOkText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+}

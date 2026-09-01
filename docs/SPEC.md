@@ -86,6 +86,7 @@ flowchart LR
   _id: string;
   username: string;
   email?: string;
+  openId?: string;          // 微信小程序 openid，微信登录账号唯一标识（稀疏唯一索引）
   passwordHash: string;
   role: 'admin' | 'member';
   status: 'active' | 'disabled';
@@ -187,6 +188,30 @@ flowchart LR
   }
 }
 ```
+
+#### POST /api/auth/wechat-login
+
+微信小程序登录（新增，不影响现有 Web 端）。
+
+请求：
+
+```json
+{
+  "code": "wx.login 获取的临时 code",
+  "username": "可选，用于绑定已有账号",
+  "password": "可选，与 username 成对出现"
+}
+```
+
+处理逻辑：
+
+1. 服务端未配置 `WECHAT_APPID`/`WECHAT_SECRET` 时返回 501，提示使用账号密码登录。
+2. 以 code 调用微信 `jscode2session` 换取 openid。
+3. openid 已绑定用户 → 直接签发 JWT 登录。
+4. 未绑定但传入账号密码 → 校验通过后将 openid 绑定到该账号并登录。
+5. 其余情况自动创建成员账号（username 形如 `wx_xxxxxxxx`，随机密码）并登录。
+
+响应结构与 `/api/auth/login` 一致（`token` + `user`）。
 
 #### POST /api/auth/logout
 
@@ -398,6 +423,8 @@ flowchart LR
 - DEEPSEEK_BASE_URL
 - ADMIN_SEED_USERNAME
 - ADMIN_SEED_PASSWORD
+- WECHAT_APPID（可选，小程序微信登录）
+- WECHAT_SECRET（可选，小程序微信登录）
 
 ### 12.3 启动顺序
 
@@ -441,3 +468,68 @@ project/
 - 回收站。
 - 更细粒度权限。
 - 多 AI 供应商支持。
+
+## 17. 微信小程序端（Taro）
+
+### 17.1 定位与原则
+
+- 与浏览器版共用同一套后端 API 与 MongoDB 数据，小程序是独立的第二客户端。
+- 浏览器版零改动：后端仅做增量扩展（`POST /api/auth/wechat-login`、User.openId 字段、WECHAT_* 环境变量）。
+- 代码位于独立目录 `miniprogram/`，独立构建与发布，不参与 Web 前端的 Docker 构建。
+
+### 17.2 技术选型
+
+- Taro 4.1.9（webpack5 编译）+ React 18 + TypeScript。
+- 样式：CSS Modules（`*.module.scss`）+ 全局主题变量（`src/styles/theme.scss`，与 Web 端一致的青绿色系 `#0d9488`）。
+- 状态管理：zustand（`store/auth.ts` 登录态、`store/ui.ts` 跨 tab 通信）。
+- Markdown 渲染：自研轻量转换器 `utils/markdown.ts`（标题/加粗/行内代码/围栏代码块/引用/列表/表格/链接图片）输出 HTML，经 RichText 组件渲染，无外部依赖。
+- 工具库：classnames、dayjs（模板预置）。
+
+### 17.3 架构
+
+```mermaid
+flowchart LR
+  MP[微信小程序 Taro] -->|Taro.request + JWT| Api[Node.js API]
+  Web[Vue3 Web 前端] --> Api
+  Api --> Mongo[(MongoDB)]
+  Api --> WX[微信 jscode2session]
+  Api --> AI[DeepSeek API]
+```
+
+### 17.4 请求封装与数据源切换
+
+- `services/api.ts` 统一封装：
+  - `weapp` 环境：Taro.request 携带 `Authorization: Bearer <token>`，GET 查询串手动拼接（数组重复 key，与 Fastify 解析一致）；401 统一清理登录态并跳转登录页。
+  - 非 `weapp`（H5 预览）：动态加载 `src/data/<mockName>.ts` 的 mock 实现，mock 状态存于内存 `src/data/db.ts`，字段结构与真实后端一致。
+- API 基地址：`config/index.ts`，开发 `http://localhost:3000`，生产 `https://ib.ipromiseyourlife.com`。
+- 微信真机联调要求：在小程序后台配置 request 合法域名（生产域名 HTTPS）。
+
+### 17.5 微信登录流程
+
+1. 小程序端 `Taro.login()` 获取临时 code。
+2. `POST /api/auth/wechat-login` 提交 code（可选携带 username/password 用于绑定）。
+3. 后端以 code 调用微信 `jscode2session` 获取 openid。
+4. 按「已绑定 → 直接登录 / 有账号密码 → 绑定后登录 / 其余 → 自动建号（wx_ 前缀，member 角色）」三段策略处理。
+5. 签发与 Web 端一致的 JWT；token 持久化于小程序本地存储（key: `ib_mp_token`）。
+
+### 17.6 页面结构
+
+| 页面 | 路径 | 类型 | 说明 |
+| --- | --- | --- | --- |
+| 笔记中心 | pages/notes | tabBar | 搜索、多选筛选（本地缓存 `ib_mp_question_filters`）、折叠展开、下拉刷新、分页 |
+| 标签 | pages/tags | tabBar | 标签云浏览、点击跳转笔记筛选；管理员入口 |
+| 我的 | pages/mine | tabBar | 用户信息、设置/管理入口、未登录引导 |
+| 登录 | pages/login | 二级 | 微信一键登录 + 账号密码登录 |
+| 笔记编辑 | pages/editor | 二级 | 新增/编辑/删除、标签难度可见性、AI 建议一键应用 |
+| 系统设置 | pages/settings | 二级 | 用户名/密码修改、退出登录、管理员入口 |
+| 用户管理 | pages/users | 二级(admin) | 创建账号、停用/启用、重置密码 |
+| 标签管理 | pages/tags-manage | 二级(admin) | 新建/编辑/删除、上移下移排序、色板选色 |
+
+- 权限与 Web 端一致：管理员可维护所有笔记，成员仅自己创建的；前端展示与后端 403 双重约束。
+- 导入导出在小程序端仅展示引导提示，实际操作在网页端。
+
+### 17.7 部署与发布
+
+- 小程序构建产物独立（`npm run build:weapp`），通过微信开发者平台上传发布；服务端无需为小程序增加容器。
+- 后端部署需在 `.env` 中按需补充 `WECHAT_APPID`、`WECHAT_SECRET`（保留 `.env` 不被部署覆盖的既有约定）。
+- H5 预览使用 mock 数据，不依赖后端；微信登录仅真机/微信开发者工具可用。

@@ -7,12 +7,12 @@ export async function registerUserRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
 
     const user = request.user as { role?: string } | null;
     if (user?.role !== 'admin') {
-      return reply.status(403).send({ message: 'Forbidden' });
+      return reply.status(403).send({ message: '仅管理员可执行此操作' });
     }
   }
 
@@ -44,13 +44,13 @@ export async function registerUserRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
 
     const me = request.user as { sub?: string };
     const user = await UserModel.findById(me.sub);
     if (!user) {
-      return reply.status(404).send({ message: 'Not found' });
+      return reply.status(404).send({ message: '用户不存在' });
     }
 
     return {
@@ -66,7 +66,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
 
     const me = request.user as { sub?: string };
@@ -79,7 +79,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
 
     const user = await UserModel.findById(me.sub);
     if (!user) {
-      return reply.status(404).send({ message: 'Not found' });
+      return reply.status(404).send({ message: '用户不存在' });
     }
 
     if (body.username) {
@@ -128,7 +128,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
     };
 
     if (!body.username || !body.password) {
-      return reply.status(400).send({ message: 'username and password are required' });
+      return reply.status(400).send({ message: '用户名和密码为必填项' });
     }
 
     const user = await UserModel.create({
@@ -162,7 +162,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
 
     const user = await UserModel.findById(params.id);
     if (!user) {
-      return reply.status(404).send({ message: 'Not found' });
+      return reply.status(404).send({ message: '用户不存在' });
     }
 
     if (body.status) {

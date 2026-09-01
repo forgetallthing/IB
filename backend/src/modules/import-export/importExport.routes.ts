@@ -14,14 +14,14 @@ export async function registerImportExportRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
 
     const user = request.user as { sub?: string; username?: string } | null;
 
     const body = request.body as { items?: Array<Record<string, unknown>> };
     if (!Array.isArray(body.items)) {
-      return reply.status(400).send({ message: 'items must be an array' });
+      return reply.status(400).send({ message: '导入数据格式不正确' });
     }
 
     const imported: string[] = [];

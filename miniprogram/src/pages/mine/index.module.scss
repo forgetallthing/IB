@@ -1,0 +1,114 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: $spacing-lg $page-padding $page-spacing;
+}
+
+/* 用户信息卡 */
+.profileCard {
+  display: flex;
+  align-items: center;
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  background-image: linear-gradient(135deg, rgba(13, 148, 136, 0.06) 0%, rgba(255, 255, 255, 0) 60%);
+}
+
+.avatar {
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatarText {
+  font-size: 44rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.profileInfo {
+  margin-left: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.username {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  margin-top: $spacing-sm;
+}
+
+.roleBadge {
+  font-size: 20rpx;
+  color: $color-primary-dark;
+  background-color: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  border-radius: $radius-xs;
+  padding: 2rpx 12rpx;
+}
+
+/* 分组容器 */
+.group {
+  margin-top: $spacing-lg;
+  border-radius: $radius-md;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+}
+
+.groupTitle {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin: $spacing-lg $spacing-xs $spacing-sm;
+}
+
+/* 未登录 */
+.loginCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: 96rpx $spacing-lg;
+  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loginText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-xl;
+}
+
+.loginBtn {
+  width: 360rpx;
+  height: $button-height-md;
+  border-radius: $radius-round;
+  background-color: $color-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+.loginBtnText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+}

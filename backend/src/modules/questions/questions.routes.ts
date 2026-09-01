@@ -92,7 +92,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
 
     const body = request.body as {
@@ -110,7 +110,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     };
 
     if (!body.title || !body.content) {
-      return reply.status(400).send({ message: 'missing required fields' });
+      return reply.status(400).send({ message: '标题和内容不能为空' });
     }
 
     const user = request.user as { sub?: string; username?: string; role?: string } | null;
@@ -136,7 +136,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
   app.get('/api/questions/:id', async (request, reply) => {
     const params = request.params as { id: string };
     const item = await QuestionModel.findById(params.id).lean();
-    if (!item) return reply.status(404).send({ message: 'Not found' });
+    if (!item) return reply.status(404).send({ message: '笔记不存在' });
 
     return {
       id: String(item._id),
@@ -161,7 +161,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
 
     const params = request.params as { id: string };
@@ -174,7 +174,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     }>;
 
     const existing = await QuestionModel.findById(params.id);
-    if (!existing) return reply.status(404).send({ message: 'Not found' });
+    if (!existing) return reply.status(404).send({ message: '笔记不存在' });
 
     const user = request.user as { sub?: string; username?: string; role?: string } | null;
     // 仅管理员或创建者可维护
@@ -196,12 +196,12 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
 
     const params = request.params as { id: string };
     const existing = await QuestionModel.findById(params.id);
-    if (!existing) return reply.status(404).send({ message: 'Not found' });
+    if (!existing) return reply.status(404).send({ message: '笔记不存在' });
 
     const user = request.user as { sub?: string; role?: string } | null;
     if (user?.role !== 'admin' && String(existing.creatorId) !== String(user?.sub)) {

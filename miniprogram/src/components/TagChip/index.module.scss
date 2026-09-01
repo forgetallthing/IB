@@ -1,0 +1,41 @@
+@use '@/styles/variables.scss' as *;
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 44rpx;
+  padding: 0 18rpx;
+  background-color: $color-bg-tag;
+  border: 1px solid transparent;
+  border-radius: $radius-round;
+  transition: all $transition-fast;
+}
+
+.pressable {
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.selected {
+  background-color: rgba(13, 148, 136, 0.08);
+  border-color: $color-primary;
+}
+
+.dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: $radius-round;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  white-space: nowrap;
+}
+
+.selected .name {
+  color: $color-primary-dark;
+}

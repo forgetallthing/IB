@@ -1,0 +1,84 @@
+@use '@/styles/variables.scss' as *;
+
+.rich {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-loose;
+  word-break: break-word;
+}
+
+// Towxml 异步解析期间的占位
+.rendering {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx 0;
+}
+
+.renderingText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  animation: rendering-blink 1s ease-in-out infinite;
+}
+
+@keyframes rendering-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+// 代码块：原生渲染（深色底 + 等宽字体 + one-dark 语法高亮）
+.code-block {
+  background-color: #0f172a;
+  border-radius: $radius-md;
+  padding: 20rpx 24rpx;
+  margin: 14rpx 0;
+  overflow: hidden;
+}
+
+.code-lang {
+  display: block;
+  font-size: 20rpx;
+  color: #6fb5a8;
+  margin-bottom: 10rpx;
+  font-family: Consolas, Menlo, monospace;
+}
+
+.code-line {
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.7;
+  color: #abb2bf;
+  font-family: Consolas, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+// one-dark 语法配色
+.tok-keyword {
+  color: #c678dd;
+}
+
+.tok-string {
+  color: #98c379;
+}
+
+.tok-number {
+  color: #d19a66;
+}
+
+.tok-comment {
+  color: #7f8c98;
+  font-style: italic;
+}
+
+.tok-func {
+  color: #61afef;
+}
+
+.tok-builtin {
+  color: #e5c07b;
+}

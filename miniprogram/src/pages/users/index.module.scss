@@ -1,0 +1,230 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: $spacing-lg $page-padding $page-spacing;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: $button-height-md;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  margin-bottom: $spacing-lg;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.addBtnText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+}
+
+.userCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+}
+
+.userAvatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-round;
+  background-color: rgba(13, 148, 136, 0.08);
+  color: $color-primary-dark;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.userInfo {
+  margin-left: $spacing-md;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.userMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.badge {
+  font-size: 20rpx;
+  border-radius: $radius-xs;
+  padding: 2rpx 12rpx;
+  margin-left: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.roleBadge {
+  color: $color-primary-dark;
+  background-color: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+
+.disabledBadge {
+  color: $color-error;
+  background-color: rgba(245, 63, 63, 0.06);
+  border: 1px solid rgba(245, 63, 63, 0.25);
+}
+
+.activeBadge {
+  color: $color-success;
+  background-color: rgba(0, 180, 42, 0.06);
+  border: 1px solid rgba(0, 180, 42, 0.25);
+}
+
+/* 操作按钮 */
+.actionRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-divider;
+}
+
+.actionBtn {
+  height: 56rpx;
+  padding: 0 26rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.btnPrimary {
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  color: $color-primary-dark;
+  background-color: rgba(13, 148, 136, 0.05);
+}
+
+.btnWarning {
+  border: 1px solid rgba(255, 125, 0, 0.35);
+  color: $color-warning;
+  background-color: rgba(255, 125, 0, 0.05);
+}
+
+.btnDanger {
+  border: 1px solid rgba(245, 63, 63, 0.35);
+  color: $color-error;
+  background-color: rgba(245, 63, 63, 0.05);
+}
+
+/* 新建账号弹窗 */
+.mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  width: 600rpx;
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-popup;
+}
+
+.modalTitle {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+}
+
+.modalField {
+  margin-top: $spacing-md;
+}
+
+.modalLabel {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+}
+
+.modalInput {
+  height: 80rpx;
+  padding: 0 $spacing-md;
+  background-color: $color-bg-tag;
+  border-radius: $radius-sm;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.modalFooter {
+  display: flex;
+  margin-top: $spacing-xl;
+  gap: $spacing-md;
+}
+
+.modalBtn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.modalCancel {
+  background-color: $color-bg-tag;
+}
+
+.modalCancelText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+}
+
+.modalOk {
+  background-color: $color-primary;
+}
+
+.modalOkText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+}

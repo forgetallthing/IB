@@ -7,4 +7,7 @@ export const appConfig = {
   adminSeedUsername: process.env.ADMIN_SEED_USERNAME ?? 'admin',
   adminSeedPassword: process.env.ADMIN_SEED_PASSWORD ?? 'admin123456',
   adminSeedEmail: process.env.ADMIN_SEED_EMAIL ?? 'admin@example.com',
+  // 微信小程序登录（未配置时微信登录接口返回 501，账号密码登录不受影响）
+  wechatAppId: process.env.WECHAT_APPID ?? '',
+  wechatSecret: process.env.WECHAT_SECRET ?? '',
 };

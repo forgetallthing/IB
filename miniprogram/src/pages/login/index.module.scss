@@ -1,0 +1,159 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(13, 148, 136, 0.10) 0%, $color-bg-page 40%);
+  padding: 0 $page-padding;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 品牌区 */
+.brand {
+  margin-top: 200rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo {
+  width: 152rpx;
+  height: 152rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12rpx 32rpx rgba(13, 148, 136, 0.30);
+}
+
+.logoText {
+  font-size: 72rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+}
+
+.appName {
+  margin-top: $spacing-xl;
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.appSlogan {
+  margin-top: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+/* 表单卡片 */
+.formCard {
+  margin-top: 96rpx;
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.inputItem {
+  display: flex;
+  align-items: center;
+  height: 96rpx;
+  border-bottom: 1px solid $color-divider;
+}
+
+.inputItemLast {
+  border-bottom: none;
+}
+
+.fieldLabel {
+  width: 120rpx;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  flex-shrink: 0;
+}
+
+.fieldInput {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+/* 主按钮 */
+.primaryBtn {
+  margin-top: $spacing-lg;
+  height: $button-height-lg;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.primaryBtnText {
+  font-size: $font-size-lg;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+.primaryBtnDisabled {
+  opacity: 0.6;
+}
+
+/* 分割线 */
+.divider {
+  display: flex;
+  align-items: center;
+  margin: $spacing-xl 0;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background-color: $color-border;
+}
+
+.dividerText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  padding: 0 $spacing-md;
+}
+
+/* 微信登录按钮 */
+.wechatBtn {
+  height: $button-height-lg;
+  border-radius: $radius-round;
+  background-color: $color-wechat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.wechatBtnText {
+  font-size: $font-size-lg;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+/* 提示 */
+.hint {
+  margin-top: $spacing-xl;
+  text-align: center;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: $line-height-loose;
+  padding-bottom: 64rpx;
+}

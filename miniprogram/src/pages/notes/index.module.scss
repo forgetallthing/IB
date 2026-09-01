@@ -1,0 +1,88 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: $spacing-md $page-padding $page-spacing;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  background-color: $color-bg-card;
+  border-radius: $radius-round;
+  padding: 0 $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.searchIcon {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  margin-right: $spacing-sm;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.searchClear {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  padding: 8rpx 0 8rpx $spacing-md;
+  flex-shrink: 0;
+}
+
+.listFooter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md 0 $spacing-xl;
+}
+
+.listFooterText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+// 回到顶部（小圆钮：白底 + 青色三角）
+.backTop {
+  position: fixed;
+  right: $page-padding;
+  bottom: 140rpx;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  background: #ffffff;
+  border: 1px solid #e2e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(13, 148, 136, 0.18);
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(24rpx);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.backTopVisible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.backTopArrow {
+  width: 0;
+  height: 0;
+  border-left: 12rpx solid transparent;
+  border-right: 12rpx solid transparent;
+  border-bottom: 18rpx solid $color-primary;
+  margin-top: -6rpx;
+}
+
+.backTop:active {
+  opacity: 0.9;
+}

@@ -1,0 +1,79 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  margin-top: $spacing-md;
+}
+
+.authorRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.author {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.mineBadge {
+  font-size: 20rpx;
+  color: $color-primary;
+  background-color: rgba(13, 148, 136, 0.08);
+  border-radius: $radius-xs;
+  padding: 2rpx 10rpx;
+  margin-left: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.privateBadge {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  background-color: $color-bg-tag;
+  border-radius: $radius-xs;
+  padding: 2rpx 10rpx;
+  margin-left: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.date {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-left: $spacing-md;
+}

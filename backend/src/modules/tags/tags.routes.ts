@@ -6,7 +6,7 @@ export async function registerTagRoutes(app: FastifyInstance) {
     try {
       await request.jwtVerify();
     } catch {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
     }
   }
 
@@ -16,7 +16,7 @@ export async function registerTagRoutes(app: FastifyInstance) {
 
     const user = request.user as { role?: string } | null;
     if (user?.role !== 'admin') {
-      return reply.status(403).send({ message: 'Forbidden' });
+      return reply.status(403).send({ message: '仅管理员可执行此操作' });
     }
   }
 
@@ -49,7 +49,7 @@ export async function registerTagRoutes(app: FastifyInstance) {
     };
 
     if (!body.name?.trim()) {
-      return reply.status(400).send({ message: 'name is required' });
+      return reply.status(400).send({ message: '标签名称不能为空' });
     }
 
     const tag = await TagModel.create({
@@ -87,7 +87,7 @@ export async function registerTagRoutes(app: FastifyInstance) {
 
     const tag = await TagModel.findById(params.id);
     if (!tag) {
-      return reply.status(404).send({ message: 'Not found' });
+      return reply.status(404).send({ message: '标签不存在' });
     }
 
     if (body.name !== undefined) tag.name = body.name.trim();
@@ -117,7 +117,7 @@ export async function registerTagRoutes(app: FastifyInstance) {
     const params = request.params as { id: string };
     const result = await TagModel.findByIdAndDelete(params.id);
     if (!result) {
-      return reply.status(404).send({ message: 'Not found' });
+      return reply.status(404).send({ message: '标签不存在' });
     }
 
     return { ok: true };

@@ -38,7 +38,8 @@ IB/
 ├── docker-compose.yml      # 三容器编排
 ├── deploy.bat              # 本地一键打包（Windows）
 ├── deploy/                 # 服务器自动部署监听（zip-watch.sh + systemd 服务）
-└── ecosystem.config.cjs    # 裸机 pm2 部署配置
+├── ecosystem.config.cjs    # 裸机 pm2 部署配置
+└── miniprogram/            # Taro 4 + React 微信小程序端（笔记浏览/新建/编辑）
 ```
 
 ## 本地开发
@@ -65,6 +66,50 @@ npm run build        # 构建前后端
 npm run typecheck    # TypeScript 检查
 npm run lint
 ```
+
+## 小程序（miniprogram）
+
+Taro 4 + React + TypeScript 微信小程序端。功能：笔记列表（点击进详情）、笔记详情/编辑（view/edit 双模式，编辑权限仅创建者与管理员可见按钮）、「新建」tab（常驻编辑器）、登录、我的。
+
+### 微信开发者工具调试
+
+```bash
+cd miniprogram
+npm install
+
+npm run dev:weapp     # 开发模式（watch 增量编译，产物输出 dist/）
+npm run build:weapp   # 完整生产构建（产物输出 dist/）
+```
+
+- 微信开发者工具「导入项目」目录选择 **`miniprogram/dist`**，AppID 填自己的（或用测试号）
+- 日常改代码：保持 `dev:weapp` watch 运行，开发者工具自动刷新
+- 若改动涉及结构性配置（`app.config.ts` 的 tabBar / 页面注册）或删除过页面，watch 增量可能产生不一致产物，症状为白屏或 `ENOENT: dist/pages/xxx` 报错。处理：**停掉 watch → 重新 `npm run dev:weapp` → 开发者工具清缓存重新编译**（顽固时关闭项目重新导入）
+
+### Trae 手机预览（trae.mobile.volcapp.com 链接）
+
+`https://trae.mobile.volcapp.com/preview/?ws=ws://localhost:1861` 是 Trae 内置技能 `TRAE-generate-mini-app` 的预览服务生成的链接，**固定监听 1861 端口**。电脑重启或 IDE 关闭后服务会停，用以下命令重新启动（`%USERPROFILE%` 即 `C:\Users\你的用户名`）：
+
+```bash
+node "%USERPROFILE%\.trae-cn\builtin_skills\TRAE-generate-mini-app\scripts\preview-server.js" "D:\Workspace2017\test\IB\miniprogram"
+```
+
+首次运行时脚本会自动把最新副本更新到 `miniprogram/.pai/skill-update/`（工具缓存，已被 git 忽略），之后也可以直接用该副本启动。看到输出 `[TraePreviewUrl]: https://trae.mobile.volcapp.com/preview/?ws=ws://localhost:1861` 即启动成功，浏览器直接访问该链接（**链接固定不变**，端口写死 1861）。
+
+> ⚠️ **切勿删除 `miniprogram/.pai/pai-preview-server.lock` 锁文件**——它用于复用端口，删掉后端口会漂移，原链接将永久失效。
+
+### 浏览器 H5 预览（可选，仅供开发参考）
+
+```bash
+cd miniprogram
+npm run dev:h5        # http://localhost:10086
+```
+
+手机同局域网访问 `http://<电脑局域网IP>:10086`。注意：H5 端 Markdown 渲染不走 towxml（weapp 专用组件），最终效果以微信开发者工具为准。
+
+### 小程序结构备注
+
+- `pages/editor/index.tsx`（详情/编辑，带 id）与 `pages/create/index.tsx`（新建 tab）都是**薄壳**，真正逻辑在 `pages/editor/EditorView.tsx`。页面文件之间禁止互相 import，否则 Taro 会给每个页面模块注入 Page 注册副作用，导致 `Please do not register multiple Pages` 崩溃
+- Markdown 渲染使用 towxml 组件（`src/components/towxml`，light 主题）；正文中 http(s) 链接点击后复制到剪贴板（小程序无法直接调起浏览器），站内路径直接导航
 
 ## Docker 部署（推荐）
 

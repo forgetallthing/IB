@@ -1,0 +1,258 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: $spacing-md $spacing-sm $spacing-lg;
+}
+
+/* 标签卡内操作行（编辑模式）：按钮靠右，次操作浅色底、主操作青绿渐变 */
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.topBtnSoft {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60rpx;
+  padding: 0 32rpx;
+  border-radius: $radius-round;
+  background-color: rgba(13, 148, 136, 0.08);
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.topBtnSoftText {
+  font-size: $font-size-md;
+  color: $color-primary-dark;
+}
+
+.topBtnPrimary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60rpx;
+  min-width: 152rpx;
+  padding: 0 40rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  box-shadow: 0 6rpx 16rpx rgba(13, 148, 136, 0.25);
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.topBtnPrimaryText {
+  font-size: $font-size-md;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+/* 编辑模式顶部提示：小程序仅支持手写 Markdown */
+.editHint {
+  display: block;
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-align: center;
+}
+
+/* 元信息卡（详情紧凑标记 / 编辑完整选项） */
+.metaCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg $spacing-md;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+/* 标签行：左固定「标签」列，右侧芯片独立换行，换行后与首个标签对齐 */
+.tagRow {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+}
+
+.tagRowLabel {
+  flex-shrink: 0;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: 44rpx; /* 与标签芯片同高，保证首行垂直居中 */
+  margin-right: 4rpx;
+}
+
+.tagChips {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+/* 难度/可见性行 */
+.inlineRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.inlineLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+  margin-right: 4rpx;
+}
+
+/* 详情模式：紧凑元信息行（难度/可见性/标签）+ 小号编辑/删除 */
+.metaHeader {
+  display: flex;
+  align-items: center;
+}
+
+.metaBadges {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.visibilityBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 40rpx;
+  padding: 0 14rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  background-color: $color-bg-tag;
+  flex-shrink: 0;
+}
+
+.miniActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+  margin-left: $spacing-sm;
+}
+
+.miniBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52rpx;
+  padding: 0 24rpx;
+  border-radius: $radius-round;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.miniBtnEdit {
+  background-color: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.35);
+}
+
+.miniBtnEditText {
+  font-size: $font-size-xs;
+  color: $color-primary-dark;
+}
+
+.miniBtnDelete {
+  background-color: rgba(245, 63, 63, 0.06);
+  border: 1px solid rgba(245, 63, 63, 0.35);
+}
+
+.miniBtnDeleteText {
+  font-size: $font-size-xs;
+  color: $color-error;
+}
+
+.emptyContent {
+  display: block;
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+/* 标题卡与正文卡分开 */
+.titleCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg $spacing-md;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.contentCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.titleInput {
+  width: 100%;
+  min-height: 176rpx; /* 空内容时保持两倍高度，换行后自动增高 */
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.contentInput {
+  width: 100%;
+  min-height: 90vh;
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+  color: $color-text-primary;
+  font-family: Menlo, Consolas, 'PingFang SC', monospace;
+}
+
+/* 选项行 */
+.optionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  height: 52rpx;
+  padding: 0 22rpx;
+  border-radius: $radius-round;
+  background-color: $color-bg-tag;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.optionActive {
+  background-color: rgba(13, 148, 136, 0.08);
+  border: 1px solid $color-primary;
+}
+
+.optionText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.optionActiveText {
+  color: $color-primary-dark;
+}

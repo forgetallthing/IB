@@ -1,0 +1,60 @@
+@use '@/styles/variables.scss' as *;
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg;
+  background-color: $color-bg-card;
+
+  &:not(:first-child) {
+    border-top: 1px solid $color-divider;
+  }
+}
+
+.pressable {
+  &:active {
+    background-color: $color-bg-hover;
+  }
+}
+
+.left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.dangerTitle {
+  color: $color-error;
+}
+
+.desc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: $spacing-md;
+}
+
+.extra {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.arrow {
+  font-size: 32rpx;
+  color: $color-text-disabled;
+  margin-left: $spacing-xs;
+  line-height: 1;
+}

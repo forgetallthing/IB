@@ -11,3 +11,10 @@ logs
 .vscode/.ropeproject
 
 ib.zip
+
+# Trae 小程序工具缓存与微信密钥（勿提交）
+.home/
+.pai/
+miniprogram/.auth/
+miniprogram/.swc/
+miniprogram/.pai/

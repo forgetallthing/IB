@@ -1,0 +1,39 @@
+// ============================================
+// 主题配色变量（与浏览器版统一的清爽青绿色系）
+// ============================================
+
+// 品牌主题色：青绿色（与 Web 端 #0d9488 保持一致）
+$color-primary: #0d9488;
+$color-primary-light: #14b8a6;
+$color-primary-dark: #0f766e;
+
+// 功能色
+$color-success: #00b42a;
+$color-warning: #ff7d00;
+$color-error: #f53f3f;
+$color-info: #0d9488;
+
+// 难度色（与 Web 端一致）
+$color-difficulty-easy: #00b42a;
+$color-difficulty-medium: #ff7d00;
+$color-difficulty-hard: #f53f3f;
+
+// 背景色
+$color-bg-page: #f5f7f7;
+$color-bg-card: #ffffff;
+$color-bg-hover: #f0f4f4;
+$color-bg-tag: #f3f6f6; // 标签中性浅色胶囊底
+
+// 文本色
+$color-text-primary: #1f2933;
+$color-text-secondary: #52606d;
+$color-text-tertiary: #86909c;
+$color-text-disabled: #c9cdd4;
+$color-text-white: #ffffff;
+
+// 边框色
+$color-border: #e5e9e9;
+$color-divider: #eef2f2;
+
+// 微信品牌绿（仅微信登录按钮使用）
+$color-wechat: #07c160;

@@ -1,0 +1,69 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  padding: $spacing-xs 0;
+
+  & + & {
+    margin-top: $spacing-xs;
+  }
+}
+
+.label {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+}
+
+.scroll {
+  flex: 1;
+  min-width: 0;
+}
+
+.chipRow {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+  white-space: nowrap;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  height: 52rpx;
+  padding: 0 22rpx;
+  border-radius: $radius-round;
+  background-color: $color-bg-tag;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.optionActive {
+  background-color: rgba(13, 148, 136, 0.08);
+  border: 1px solid $color-primary;
+  color: $color-primary-dark;
+}
+
+.clear {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  margin-left: $spacing-md;
+  flex-shrink: 0;
+  padding: 0 $spacing-xs;
+}
