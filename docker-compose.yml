@@ -24,6 +24,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-please-change-me-to-a-long-random-string}
       ADMIN_SEED_USERNAME: ${ADMIN_SEED_USERNAME:-admin}
       ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-admin123456}
+      # 微信小程序登录：未配置时微信登录接口返回 501，账号密码登录不受影响
+      WECHAT_APPID: ${WECHAT_APPID:-}
+      WECHAT_SECRET: ${WECHAT_SECRET:-}
     depends_on:
       - mongo
 

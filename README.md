@@ -150,6 +150,7 @@ nginx 配置与证书均为卷挂载，后续修改只需 `docker compose restar
 | `ADMIN_SEED_PASSWORD` | 管理员初始密码（生产必改） | `admin123456` |
 | `MONGO_USER` / `MONGO_PASSWORD` | MongoDB root 认证 | `ibadmin` / 占位符 |
 | `MONGO_PORT` | MongoDB 对外暴露端口 | `28117` |
+| `WECHAT_APPID` / `WECHAT_SECRET` | 微信小程序登录凭证（不配置则微信登录不可用） | 空 |
 | `PORT` | 后端服务端口（容器内） | `3000` |
 | `VITE_API_BASE_URL` | 前端 API 地址（同源部署可不设） | `/api` |
 
