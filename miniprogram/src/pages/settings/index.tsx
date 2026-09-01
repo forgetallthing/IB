@@ -3,7 +3,7 @@ import { View, Text, Input } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import CellItem from '@/components/CellItem';
 import ConfirmModal from '@/components/ConfirmModal';
-import { getMe, updateMe } from '@/services/api';
+import { getMe, updateMe, bindWechat } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import type { User } from '@/types';
 import styles from './index.module.scss';
@@ -79,6 +79,22 @@ const SettingsPage: React.FC = () => {
     Taro.reLaunch({ url: '/pages/login/index' });
   };
 
+  /** 绑定微信：静默取 code 后绑定到当前账号，之后可在登录页用微信快捷登录 */
+  const handleBindWechat = async () => {
+    try {
+      const loginRes = await Taro.login();
+      if (!loginRes.code) {
+        Taro.showToast({ title: '微信登录失败，请重试', icon: 'none' });
+        return;
+      }
+      await bindWechat(loginRes.code);
+      Taro.showToast({ title: '微信绑定成功', icon: 'success' });
+    } catch (error) {
+      console.error('[Settings] 绑定微信失败:', error);
+      Taro.showToast({ title: error instanceof Error ? error.message : '绑定失败', icon: 'none' });
+    }
+  };
+
   const displayName = me?.username ?? storeUser?.username ?? '';
 
   return (
@@ -92,6 +108,7 @@ const SettingsPage: React.FC = () => {
           onClick={() => setDialog({ type: 'username', value: displayName })}
         />
         <CellItem title="修改密码" onClick={() => setDialog({ type: 'password', value: '', current: '' })} />
+        <CellItem title="绑定微信" desc="绑定后可用微信快捷登录" onClick={handleBindWechat} />
         <CellItem title="退出登录" danger arrow={false} onClick={() => setConfirmLogout(true)} />
       </View>
 

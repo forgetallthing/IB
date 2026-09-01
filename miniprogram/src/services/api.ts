@@ -93,6 +93,11 @@ export function wechatLogin(code: string, username?: string, password?: string) 
   return request<LoginResult>('wechat-login', 'POST', '/api/auth/wechat-login', { code, username, password });
 }
 
+/** 绑定微信到当前登录账号，之后可在小程序直接微信登录 */
+export function bindWechat(code: string) {
+  return request<{ ok: boolean; bound: boolean }>('bind-wechat', 'POST', '/api/auth/bind-wechat', { code });
+}
+
 export function getMe() {
   return request<User>('get-me', 'GET', '/api/users/me');
 }

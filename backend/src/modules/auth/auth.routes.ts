@@ -125,6 +125,58 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return issueLogin(created, reply);
   });
 
+  /**
+   * 绑定微信：把当前登录账号与微信 openid 关联，之后可在小程序直接微信登录。
+   * 幂等：重复绑定同一微信返回成功；openid 已被其他账号占用则拒绝。
+   */
+  app.post('/api/auth/bind-wechat', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const body = request.body as { code?: string };
+    if (!body.code) {
+      return reply.status(400).send({ message: '微信登录失败，请重试' });
+    }
+    if (!appConfig.wechatAppId || !appConfig.wechatSecret) {
+      return reply.status(501).send({ message: '微信登录未配置' });
+    }
+
+    let session: WechatSessionResponse;
+    try {
+      session = await codeToSession(body.code);
+    } catch (error) {
+      console.error('[Auth] code2session 请求失败:', error);
+      return reply.status(502).send({ message: '微信服务暂不可用，请稍后重试' });
+    }
+    if (!session.openid) {
+      console.error('[Auth] code2session 返回错误:', session.errcode, session.errmsg);
+      return reply.status(401).send({ message: '微信登录失败，请重试' });
+    }
+
+    const user = await UserModel.findById(String((request.user as { sub?: string }).sub ?? '')).exec();
+    if (!user || user.status !== 'active') {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    // openid 已被其他账号占用
+    const occupied = await UserModel.findOne({ openId: session.openid }).exec();
+    if (occupied && String(occupied._id) !== String(user._id)) {
+      return reply.status(409).send({ message: '该微信已绑定其他账号' });
+    }
+
+    if (user.openId === session.openid) {
+      return { ok: true, bound: true };
+    }
+
+    user.openId = session.openid;
+    await user.save();
+    console.log('[Auth] 微信绑定成功:', user.username);
+    return { ok: true, bound: true };
+  });
+
   app.get('/api/auth/me', async (request, reply) => {
     try {
       await request.jwtVerify();

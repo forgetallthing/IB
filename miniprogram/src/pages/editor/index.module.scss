@@ -4,21 +4,20 @@
   padding: $spacing-md $spacing-sm $spacing-lg;
 }
 
-/* 标签卡内操作行（编辑模式）：按钮靠右，次操作浅色底、主操作青绿渐变 */
-.cardActions {
+/* 可见性行右侧操作按钮组：推到行末，随 flex-wrap 自动换行 */
+.inlineActions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: $spacing-md;
-  margin-bottom: $spacing-md;
+  gap: $spacing-sm;
+  margin-left: auto;
 }
 
 .topBtnSoft {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 60rpx;
-  padding: 0 32rpx;
+  height: 52rpx;
+  padding: 0 24rpx;
   border-radius: $radius-round;
   background-color: rgba(13, 148, 136, 0.08);
   transition: all $transition-fast;
@@ -29,7 +28,7 @@
 }
 
 .topBtnSoftText {
-  font-size: $font-size-md;
+  font-size: $font-size-sm;
   color: $color-primary-dark;
 }
 
@@ -37,9 +36,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 60rpx;
-  min-width: 152rpx;
-  padding: 0 40rpx;
+  height: 52rpx;
+  min-width: 120rpx;
+  padding: 0 28rpx;
   border-radius: $radius-round;
   background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
   box-shadow: 0 6rpx 16rpx rgba(13, 148, 136, 0.25);
@@ -52,7 +51,7 @@
 }
 
 .topBtnPrimaryText {
-  font-size: $font-size-md;
+  font-size: $font-size-sm;
   color: $color-text-white;
   font-weight: $font-weight-medium;
 }

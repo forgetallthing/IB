@@ -62,16 +62,6 @@ const MinePage: React.FC = () => {
           </View>
         </>
       ) : null}
-
-      {/* 数据 */}
-      <Text className={styles.groupTitle}>数据</Text>
-      <View className={styles.group}>
-        <CellItem
-          title="导入 / 导出"
-          desc="请在网页端设置页操作"
-          onClick={() => Taro.showToast({ title: '请在网页端设置页操作', icon: 'none' })}
-        />
-      </View>
     </View>
   );
 };

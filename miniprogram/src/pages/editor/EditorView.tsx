@@ -71,10 +71,10 @@ const EditorView: React.FC = () => {
     }
   }, []);
 
-  /** 标签列表仅在编辑模式需要，首次进入编辑时才加载 */
+  /** 标签库用于取颜色（详情）与勾选（编辑），进入页面即加载一次 */
   const tagsLoadedRef = React.useRef(false);
   useEffect(() => {
-    if (mode !== 'edit' || tagsLoadedRef.current) return;
+    if (tagsLoadedRef.current) return;
     tagsLoadedRef.current = true;
     getTags()
       .then((list) => setTags(list.filter((tag) => tag.active)))
@@ -82,7 +82,7 @@ const EditorView: React.FC = () => {
         tagsLoadedRef.current = false;
         console.error('[Editor] 加载标签失败:', error);
       });
-  }, [mode]);
+  }, []);
 
   useEffect(() => {
     if (editId) {
@@ -191,7 +191,7 @@ const EditorView: React.FC = () => {
           <View className={styles.metaHeader}>
             <View className={styles.metaBadges}>
               {selectedTagNames.map((tagName) => (
-                <TagChip key={tagName} name={tagName} color={tagColorMap[tagName]} />
+                <TagChip key={tagName} name={tagName} color={tagColorMap[tagName] || '#0d9488'} />
               ))}
               <DifficultyBadge difficulty={difficulty} />
               <Text className={styles.visibilityBadge}>{VISIBILITY_LABELS[visibility]}</Text>
@@ -209,22 +209,6 @@ const EditorView: React.FC = () => {
           </View>
         ) : (
           <>
-            {/* 操作行：新建 tab 为「新建」，编辑已有笔记为「取消」；保存常驻右侧 */}
-            <View className={styles.cardActions}>
-              {isNewTab ? (
-                <View className={styles.topBtnSoft} onClick={handleResetClick}>
-                  <Text className={styles.topBtnSoftText}>＋ 新建</Text>
-                </View>
-              ) : (
-                <View className={styles.topBtnSoft} onClick={saving ? undefined : handleCancelEdit}>
-                  <Text className={styles.topBtnSoftText}>取消</Text>
-                </View>
-              )}
-              <View className={styles.topBtnPrimary} onClick={saving ? undefined : handleSave}>
-                <Text className={styles.topBtnPrimaryText}>{saving ? '保存中…' : '保存'}</Text>
-              </View>
-            </View>
-
             <View className={styles.tagRow}>
               <Text className={styles.tagRowLabel}>标签</Text>
               <View className={styles.tagChips}>
@@ -255,6 +239,8 @@ const EditorView: React.FC = () => {
                 </View>
               ))}
             </View>
+
+            {/* 可见性行右侧放操作按钮：新建 tab 为「＋ 新建」，编辑已有为「取消」；保存常驻 */}
             <View className={styles.inlineRow}>
               <Text className={styles.inlineLabel}>可见性</Text>
               {VISIBILITY_LIST.map((item) => (
@@ -268,6 +254,20 @@ const EditorView: React.FC = () => {
                   </Text>
                 </View>
               ))}
+              <View className={styles.inlineActions}>
+                {isNewTab ? (
+                  <View className={styles.topBtnSoft} onClick={handleResetClick}>
+                    <Text className={styles.topBtnSoftText}>＋ 新建</Text>
+                  </View>
+                ) : (
+                  <View className={styles.topBtnSoft} onClick={saving ? undefined : handleCancelEdit}>
+                    <Text className={styles.topBtnSoftText}>取消</Text>
+                  </View>
+                )}
+                <View className={styles.topBtnPrimary} onClick={saving ? undefined : handleSave}>
+                  <Text className={styles.topBtnPrimaryText}>{saving ? '保存中…' : '保存'}</Text>
+                </View>
+              </View>
             </View>
           </>
         )}
