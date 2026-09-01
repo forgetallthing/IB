@@ -15,6 +15,8 @@ export async function createApp() {
   await app.register(cors, {
     origin: true,
     credentials: true,
+    // 默认仅 GET/HEAD/POST，PATCH/DELETE（改资料、排序、删除等）会被浏览器拦截
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   await app.register(jwt, {

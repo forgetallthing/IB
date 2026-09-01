@@ -156,6 +156,9 @@ export async function registerUserRoutes(app: FastifyInstance) {
 
     const params = request.params as { id: string };
     const body = request.body as {
+      username?: string;
+      email?: string;
+      role?: 'admin' | 'member';
       status?: 'active' | 'disabled';
       password?: string;
     };
@@ -163,6 +166,23 @@ export async function registerUserRoutes(app: FastifyInstance) {
     const user = await UserModel.findById(params.id);
     if (!user) {
       return reply.status(404).send({ message: '用户不存在' });
+    }
+
+    const me = request.user as { sub?: string };
+    if (String(user._id) === me.sub && (body.role || body.status)) {
+      return reply.status(400).send({ message: '不能修改自己的角色或状态' });
+    }
+
+    if (body.username) {
+      user.username = body.username.trim();
+    }
+
+    if (body.email !== undefined) {
+      user.email = body.email || null;
+    }
+
+    if (body.role) {
+      user.role = body.role;
     }
 
     if (body.status) {
@@ -173,7 +193,15 @@ export async function registerUserRoutes(app: FastifyInstance) {
       user.passwordHash = hashPassword(body.password);
     }
 
-    await user.save();
+    try {
+      await user.save();
+    } catch (error) {
+      const code = (error as { code?: number }).code;
+      if (code === 11000) {
+        return reply.status(409).send({ message: '用户名或邮箱已被占用' });
+      }
+      throw error;
+    }
 
     return {
       id: String(user._id),

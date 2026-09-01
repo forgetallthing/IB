@@ -162,7 +162,7 @@ export function createUser(payload: { username: string; password: string; role?:
   return request<UserWithTime>('create-user', 'POST', '/api/users', payload);
 }
 
-export function updateUser(id: string, patch: { status?: 'active' | 'disabled'; password?: string }) {
+export function updateUser(id: string, patch: { username?: string; role?: 'admin' | 'member'; status?: 'active' | 'disabled'; password?: string }) {
   return request<UserWithTime>('update-user', 'PATCH', `/api/users/${id}`, patch);
 }
 

@@ -228,3 +228,30 @@
   font-size: $font-size-md;
   color: $color-text-white;
 }
+
+/* 编辑弹窗的角色/状态胶囊选择 */
+.pillRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.pill {
+  height: 60rpx;
+  padding: 0 28rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background-color: $color-bg-tag;
+  border: 1px solid transparent;
+  transition: all $transition-fast;
+}
+
+.pillActive {
+  color: $color-primary-dark;
+  background-color: rgba(13, 148, 136, 0.08);
+  border-color: rgba(13, 148, 136, 0.4);
+  font-weight: $font-weight-medium;
+}

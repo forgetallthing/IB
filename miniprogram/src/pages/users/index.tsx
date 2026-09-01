@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
-import ConfirmModal from '@/components/ConfirmModal';
 import { getUsers, createUser, updateUser } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { formatDate } from '@/utils/format';
@@ -13,6 +12,13 @@ interface CreateForm {
   password: string;
 }
 
+interface EditForm {
+  username: string;
+  role: 'admin' | 'member';
+  status: 'active' | 'disabled';
+  password: string;
+}
+
 const UsersPage: React.FC = () => {
   const token = useAuthStore((state) => state.token);
   const me = useAuthStore((state) => state.user);
@@ -20,7 +26,8 @@ const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserWithTime[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm>({ username: '', password: '' });
-  const [resetTarget, setResetTarget] = useState<UserWithTime | null>(null);
+  const [editTarget, setEditTarget] = useState<UserWithTime | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ username: '', role: 'member', status: 'active', password: '' });
 
   const loadUsers = useCallback(() => {
     if (!token) {
@@ -62,28 +69,37 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  const toggleStatus = async (user: UserWithTime) => {
-    const next = user.status === 'active' ? 'disabled' : 'active';
-    try {
-      await updateUser(user.id, { status: next });
-      Taro.showToast({ title: next === 'active' ? '已启用' : '已停用', icon: 'success' });
-      loadUsers();
-    } catch (error) {
-      console.error('[Users] 更新状态失败:', error);
-      Taro.showToast({ title: error instanceof Error ? error.message : '操作失败', icon: 'none' });
-    }
+  const openEdit = (user: UserWithTime) => {
+    setEditTarget(user);
+    setEditForm({ username: user.username, role: user.role, status: user.status, password: '' });
   };
 
-  const resetPassword = async () => {
-    if (!resetTarget) return;
+  const handleEditSave = async () => {
+    if (!editTarget) return;
+    if (!editForm.username.trim()) {
+      Taro.showToast({ title: '用户名不能为空', icon: 'none' });
+      return;
+    }
+    if (editForm.password && editForm.password.length < 6) {
+      Taro.showToast({ title: '新密码至少 6 位', icon: 'none' });
+      return;
+    }
     try {
-      await updateUser(resetTarget.id, { password: 'ib123456' });
-      Taro.showToast({ title: '密码已重置为 ib123456', icon: 'none', duration: 2500 });
-      setResetTarget(null);
+      const body: { username: string; role: 'admin' | 'member'; status: 'active' | 'disabled'; password?: string } = {
+        username: editForm.username.trim(),
+        role: editForm.role,
+        status: editForm.status,
+      };
+      if (editForm.password) {
+        body.password = editForm.password;
+      }
+      await updateUser(editTarget.id, body);
+      Taro.showToast({ title: '用户已更新', icon: 'success' });
+      setEditTarget(null);
+      loadUsers();
     } catch (error) {
-      console.error('[Users] 重置密码失败:', error);
-      Taro.showToast({ title: error instanceof Error ? error.message : '重置失败', icon: 'none' });
-      setResetTarget(null);
+      console.error('[Users] 更新用户失败:', error);
+      Taro.showToast({ title: error instanceof Error ? error.message : '保存失败', icon: 'none' });
     }
   };
 
@@ -114,14 +130,8 @@ const UsersPage: React.FC = () => {
           </View>
 
           <View className={styles.actionRow}>
-            <View
-              className={`${styles.actionBtn} ${user.status === 'active' ? styles.btnWarning : styles.btnPrimary}`}
-              onClick={() => toggleStatus(user)}
-            >
-              <Text>{user.status === 'active' ? '停用' : '启用'}</Text>
-            </View>
-            <View className={`${styles.actionBtn} ${styles.btnDanger}`} onClick={() => setResetTarget(user)}>
-              <Text>重置密码</Text>
+            <View className={`${styles.actionBtn} ${styles.btnPrimary}`} onClick={() => openEdit(user)}>
+              <Text>编辑</Text>
             </View>
           </View>
         </View>
@@ -162,16 +172,75 @@ const UsersPage: React.FC = () => {
         </View>
       ) : null}
 
-      {/* 重置密码确认 */}
-      <ConfirmModal
-        visible={Boolean(resetTarget)}
-        title="重置密码"
-        content={`确定将「${resetTarget?.username ?? ''}」的密码重置为 ib123456 吗？`}
-        confirmText="重置"
-        danger
-        onConfirm={resetPassword}
-        onCancel={() => setResetTarget(null)}
-      />
+      {/* 编辑用户弹窗 */}
+      {editTarget ? (
+        <View className={styles.mask} onClick={() => setEditTarget(null)}>
+          <View className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <Text className={styles.modalTitle}>编辑用户</Text>
+            <View className={styles.modalField}>
+              <Text className={styles.modalLabel}>用户名</Text>
+              <Input
+                className={styles.modalInput}
+                value={editForm.username}
+                placeholder="请输入用户名"
+                onInput={(e) => setEditForm((prev) => ({ ...prev, username: e.detail.value }))}
+              />
+            </View>
+            <View className={styles.modalField}>
+              <Text className={styles.modalLabel}>角色</Text>
+              <View className={styles.pillRow}>
+                <View
+                  className={`${styles.pill} ${editForm.role === 'member' ? styles.pillActive : ''}`}
+                  onClick={() => setEditForm((prev) => ({ ...prev, role: 'member' }))}
+                >
+                  <Text>普通用户</Text>
+                </View>
+                <View
+                  className={`${styles.pill} ${editForm.role === 'admin' ? styles.pillActive : ''}`}
+                  onClick={() => setEditForm((prev) => ({ ...prev, role: 'admin' }))}
+                >
+                  <Text>管理员</Text>
+                </View>
+              </View>
+            </View>
+            <View className={styles.modalField}>
+              <Text className={styles.modalLabel}>状态</Text>
+              <View className={styles.pillRow}>
+                <View
+                  className={`${styles.pill} ${editForm.status === 'active' ? styles.pillActive : ''}`}
+                  onClick={() => setEditForm((prev) => ({ ...prev, status: 'active' }))}
+                >
+                  <Text>正常</Text>
+                </View>
+                <View
+                  className={`${styles.pill} ${editForm.status === 'disabled' ? styles.pillActive : ''}`}
+                  onClick={() => setEditForm((prev) => ({ ...prev, status: 'disabled' }))}
+                >
+                  <Text>停用</Text>
+                </View>
+              </View>
+            </View>
+            <View className={styles.modalField}>
+              <Text className={styles.modalLabel}>重置密码（留空则不修改）</Text>
+              <Input
+                className={styles.modalInput}
+                password
+                value={editForm.password}
+                placeholder="输入新密码（至少 6 位）"
+                onInput={(e) => setEditForm((prev) => ({ ...prev, password: e.detail.value }))}
+              />
+            </View>
+            <View className={styles.modalFooter}>
+              <View className={`${styles.modalBtn} ${styles.modalCancel}`} onClick={() => setEditTarget(null)}>
+                <Text className={styles.modalCancelText}>取消</Text>
+              </View>
+              <View className={`${styles.modalBtn} ${styles.modalOk}`} onClick={handleEditSave}>
+                <Text className={styles.modalOkText}>保存</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 };

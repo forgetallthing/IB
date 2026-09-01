@@ -166,11 +166,54 @@ async function toggleUser(user: UserItem) {
   await loadUsers();
 }
 
-async function resetPassword(user: UserItem) {
-  const password = prompt(`为 ${user.username} 输入新密码`);
-  if (!password) return;
-  await request(`/users/${user.id}`, { method: 'PATCH', body: JSON.stringify({ password }) });
-  notice('密码已重置');
+const editingUser = ref<UserItem | null>(null);
+const userEditForm = reactive({
+  username: '',
+  email: '',
+  role: 'member' as 'admin' | 'member',
+  status: 'active' as 'active' | 'disabled',
+  password: '',
+});
+
+function openUserEdit(user: UserItem) {
+  editingUser.value = user;
+  userEditForm.username = user.username;
+  userEditForm.email = user.email ?? '';
+  userEditForm.role = user.role;
+  userEditForm.status = user.status;
+  userEditForm.password = '';
+}
+
+function closeUserEdit() {
+  editingUser.value = null;
+}
+
+async function saveUserEdit() {
+  if (!editingUser.value) return;
+  if (!userEditForm.username.trim()) {
+    fail('用户名不能为空');
+    return;
+  }
+  try {
+    const body: Record<string, unknown> = {
+      username: userEditForm.username.trim(),
+      email: userEditForm.email,
+      role: userEditForm.role,
+      status: userEditForm.status,
+    };
+    if (userEditForm.password) {
+      body.password = userEditForm.password;
+    }
+    await request(`/users/${editingUser.value.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+    notice('用户已更新');
+    closeUserEdit();
+    await loadUsers();
+  } catch (error) {
+    fail(error instanceof Error ? error.message : '保存失败');
+  }
 }
 
 async function createTag() {
@@ -368,8 +411,8 @@ onMounted(refresh);
             <p>{{ user.email || '无邮箱' }} · {{ user.role }} · {{ user.status }}</p>
           </div>
           <div class="actions">
+            <button class="secondary" @click="openUserEdit(user)">编辑</button>
             <button class="secondary" @click="toggleUser(user)">{{ user.status === 'active' ? '禁用' : '启用' }}</button>
-            <button class="secondary" @click="resetPassword(user)">重置密码</button>
           </div>
         </div>
       </div>
@@ -429,6 +472,44 @@ onMounted(refresh);
       </div>
       <textarea v-model="importText" rows="14" placeholder='粘贴 {"items": [...] }'></textarea>
     </article>
+
+    <div v-if="editingUser" class="modal-overlay" @click.self="closeUserEdit">
+      <div class="modal-card">
+        <h2>编辑用户</h2>
+        <div class="form-grid">
+          <label class="field-item">
+            <span>用户名</span>
+            <input v-model="userEditForm.username" placeholder="用户名" />
+          </label>
+          <label class="field-item">
+            <span>邮箱</span>
+            <input v-model="userEditForm.email" placeholder="邮箱" />
+          </label>
+          <label class="field-item">
+            <span>角色</span>
+            <select v-model="userEditForm.role">
+              <option value="member">member（普通用户）</option>
+              <option value="admin">admin（管理员）</option>
+            </select>
+          </label>
+          <label class="field-item">
+            <span>状态</span>
+            <select v-model="userEditForm.status">
+              <option value="active">active（正常）</option>
+              <option value="disabled">disabled（已停用）</option>
+            </select>
+          </label>
+          <label class="field-item">
+            <span>重置密码（留空则不修改）</span>
+            <input v-model="userEditForm.password" type="password" placeholder="输入新密码" />
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary" type="button" @click="closeUserEdit">取消</button>
+          <button type="button" @click="saveUserEdit">保存</button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="editingTag" class="modal-overlay" @click.self="closeEdit">
       <div class="modal-card">
