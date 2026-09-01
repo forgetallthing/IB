@@ -19,7 +19,7 @@ const LoginPage: React.FC = () => {
     }, 600);
   };
 
-  /** 账号密码登录（若已通过微信登录过，可在后端同时绑定） */
+  /** 账号密码登录 */
   const handleAccountLogin = async () => {
     if (!username.trim() || !password) {
       Taro.showToast({ title: '请输入用户名和密码', icon: 'none' });
@@ -37,7 +37,7 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  /** 微信一键登录：code 换 session，自动创建或绑定账号 */
+  /** 微信一键登录：仅已绑定微信的账号可登录 */
   const handleWechatLogin = async () => {
     setSubmitting(true);
     try {
@@ -108,7 +108,7 @@ const LoginPage: React.FC = () => {
         <Text className={styles.wechatBtnText}>微信一键登录</Text>
       </View>
 
-      <Text className={styles.hint}>账号由管理员统一创建{'\n'}首次微信登录将自动创建成员账号{'\n'}使用已有账号登录可绑定微信</Text>
+      <Text className={styles.hint}>账号由管理员统一创建{'\n'}微信登录仅支持已绑定的账号{'\n'}请先用账号密码登录，再到设置页绑定微信</Text>
     </View>
   );
 };

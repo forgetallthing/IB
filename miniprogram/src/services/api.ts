@@ -89,8 +89,9 @@ export function login(username: string, password: string) {
   return request<LoginResult>('login', 'POST', '/api/auth/login', { username, password });
 }
 
-export function wechatLogin(code: string, username?: string, password?: string) {
-  return request<LoginResult>('wechat-login', 'POST', '/api/auth/wechat-login', { code, username, password });
+/** 微信登录：仅已绑定微信的账号可登录，未绑定请用账号密码登录后到设置页绑定 */
+export function wechatLogin(code: string) {
+  return request<LoginResult>('wechat-login', 'POST', '/api/auth/wechat-login', { code });
 }
 
 /** 绑定微信到当前登录账号，之后可在小程序直接微信登录 */

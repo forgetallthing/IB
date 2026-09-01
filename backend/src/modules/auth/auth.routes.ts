@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { randomBytes } from 'crypto';
 import { UserModel } from '../../models/user.model.js';
 import { hashPassword } from '../../services/password.service.js';
 import { appConfig } from '../../config.js';
@@ -55,13 +54,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   /**
-   * 微信小程序登录：
-   * 1. 已绑定 openid 的用户直接登录；
-   * 2. 未绑定但传了账号密码，则校验通过后绑定 openid（已有账号绑定微信）；
-   * 3. 其余情况自动创建成员账号（username 形如 wx_xxxxxxxx）。
+   * 微信小程序登录：仅已绑定微信的账号可登录。
+   * 未绑定的微信不自动注册，需先用账号密码登录，再到设置页绑定微信。
    */
   app.post('/api/auth/wechat-login', async (request, reply) => {
-    const body = request.body as { code?: string; username?: string; password?: string };
+    const body = request.body as { code?: string };
     if (!body.code) {
       return reply.status(400).send({ message: '微信登录失败，请重试' });
     }
@@ -82,47 +79,12 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       return reply.status(401).send({ message: '微信登录失败，请重试' });
     }
 
-    // 1. 已绑定用户
     const bound = await UserModel.findOne({ openId: session.openid, status: 'active' }).exec();
-    if (bound) {
-      return issueLogin(bound, reply);
+    if (!bound) {
+      return reply.status(403).send({ message: '该微信未绑定账号，请使用账号密码登录，并在设置页绑定微信' });
     }
 
-    // 2. 绑定已有账号
-    if (body.username && body.password) {
-      const existing = await UserModel.findOne({ username: body.username, status: 'active' }).exec();
-      if (!existing || existing.passwordHash !== hashPassword(body.password)) {
-        return reply.status(401).send({ message: '用户名或密码错误，绑定失败' });
-      }
-      existing.openId = session.openid;
-      await existing.save();
-      return issueLogin(existing, reply);
-    }
-
-    // 3. 自动创建成员账号
-    let username = '';
-    for (let i = 0; i < 5; i += 1) {
-      const candidate = `wx_${randomBytes(4).toString('hex')}`;
-      const conflict = await UserModel.findOne({ username: candidate }).exec();
-      if (!conflict) {
-        username = candidate;
-        break;
-      }
-    }
-    if (!username) {
-      return reply.status(500).send({ message: '创建账号失败，请稍后重试' });
-    }
-
-    const created = await UserModel.create({
-      username,
-      passwordHash: hashPassword(randomBytes(16).toString('hex')),
-      role: 'member',
-      status: 'active',
-      openId: session.openid,
-    });
-
-    console.log('[Auth] 微信登录自动创建账号:', username);
-    return issueLogin(created, reply);
+    return issueLogin(bound, reply);
   });
 
   /**
