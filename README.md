@@ -124,6 +124,10 @@ echo "MONGO_USER=ibadmin" >> .env
 echo "MONGO_PASSWORD=强密码" >> .env
 echo "MONGO_PORT=28117" >> .env
 
+# Coze 智能体 API（可选，不配置则「AI 分析」功能不可用）
+echo "COZE_API_TOKEN=你的个人访问令牌" >> .env
+echo "COZE_BOT_ID=你的智能体ID" >> .env
+
 docker compose up -d --build
 ```
 
@@ -151,6 +155,8 @@ nginx 配置与证书均为卷挂载，后续修改只需 `docker compose restar
 | `MONGO_USER` / `MONGO_PASSWORD` | MongoDB root 认证 | `ibadmin` / 占位符 |
 | `MONGO_PORT` | MongoDB 对外暴露端口 | `28117` |
 | `WECHAT_APPID` / `WECHAT_SECRET` | 微信小程序登录凭证（不配置则微信登录不可用） | 空 |
+| `COZE_API_TOKEN` / `COZE_BOT_ID` | Coze 智能体 API 凭证，用于每日刷题「AI 分析」（不配置则该功能返回 501） | 空 |
+| `COZE_API_BASE` | Coze API 地址，海外版改为 `https://api.coze.com` | `https://api.coze.cn` |
 | `PORT` | 后端服务端口（容器内） | `3000` |
 | `VITE_API_BASE_URL` | 前端 API 地址（同源部署可不设） | `/api` |
 

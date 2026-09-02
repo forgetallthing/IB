@@ -27,6 +27,10 @@ services:
       # 微信小程序登录：未配置时微信登录接口返回 501，账号密码登录不受影响
       WECHAT_APPID: ${WECHAT_APPID:-}
       WECHAT_SECRET: ${WECHAT_SECRET:-}
+      # Coze 智能体 API（未配置时 AI 分析接口返回 501）
+      COZE_API_TOKEN: ${COZE_API_TOKEN:-}
+      COZE_BOT_ID: ${COZE_BOT_ID:-}
+      COZE_API_BASE: ${COZE_API_BASE:-https://api.coze.cn}
     depends_on:
       - mongo
 
