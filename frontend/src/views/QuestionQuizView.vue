@@ -129,7 +129,7 @@ watch(question, async (val) => {
   }
 });
 
-// 显示答案时渲染参考答案（笔记正文），代码块带语法高亮
+// 显示详情时渲染参考内容（笔记正文），代码块带语法高亮
 watch(showAnswer, async (visible) => {
   if (!visible || !question.value) return;
   await nextTick();
@@ -157,23 +157,23 @@ onBeforeUnmount(() => {
   <section class="page">
     <header class="page-header">
       <div>
-        <h1>每日刷题</h1>
-        <p class="subtitle">随机抽题，先自己作答，再对照参考答案。</p>
+        <h1>每日回想</h1>
+        <p class="subtitle">随机抽取笔记，先自己回想作答，再对照参考详情。</p>
       </div>
       <div class="header-actions">
         <button type="button" class="secondary" :disabled="analyzing || !question" @click="runAiReview">
           {{ analyzing ? 'AI 分析中…' : 'AI 分析' }}
         </button>
         <button type="button" class="secondary" :disabled="!question" @click="showAnswer = !showAnswer">
-          {{ showAnswer ? '隐藏答案' : '显示答案' }}
+          {{ showAnswer ? '隐藏详情' : '显示详情' }}
         </button>
-        <button type="button" :disabled="loading" @click="nextQuestion">再来一题</button>
+        <button type="button" :disabled="loading" @click="nextQuestion">再来一篇</button>
       </div>
     </header>
 
-    <p v-if="loading && !question" class="loading">抽题中…</p>
+    <p v-if="loading && !question" class="loading">抽取中…</p>
 
-    <p v-else-if="!question" class="empty">暂无可刷的题目，先去创建一些笔记吧。</p>
+    <p v-else-if="!question" class="empty">暂无可回想的内容，先去创建一些笔记吧。</p>
 
     <template v-else>
       <article class="panel question-card">
@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-if="showAnswer" class="panel side answer-side">
-          <p class="side-label">参考答案</p>
+          <p class="side-label">参考详情</p>
           <div ref="answerEl" class="md-content"></div>
         </section>
 
@@ -309,11 +309,32 @@ onBeforeUnmount(() => {
   border-color: var(--line);
 }
 
+/* 去掉 Vditor 内容区默认的限宽与两侧留白，作答区域铺满面板 */
+.my-editor :deep(.vditor-reset) {
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 12px 16px !important;
+}
+
 /* PC / Pad：左侧作答占满全高，右侧按需放 AI 分析 / 参考答案 */
 @media (min-width: 900px) {
+  /* 行数显式声明，grid-row: 1 / -1 才能正确跨到最后一行 */
+  .quiz-grid.no-side {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
   .quiz-grid.one-side,
   .quiz-grid.two-sides {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .quiz-grid.one-side {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .quiz-grid.two-sides {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .input-side {
