@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { Types, isValidObjectId } from 'mongoose';
 import { QuestionModel } from '../../models/question.model.js';
 
 export async function registerQuestionRoutes(app: FastifyInstance) {
@@ -117,6 +118,56 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       page,
       limit,
       hasMore: page * limit < total,
+    };
+  });
+
+  // 随机抽题：与列表接口相同的可见性基线；excludeId 供"再来一题"避开当前题
+  app.get('/api/questions/random', async (request, reply) => {
+    let me: { sub?: string; role?: string } | null = null;
+    try {
+      await request.jwtVerify();
+      me = request.user as { sub?: string; role?: string };
+    } catch {
+      // 游客
+    }
+
+    const query = request.query as { excludeId?: string };
+
+    const match: Record<string, unknown> =
+      !me
+        ? { visibility: 'public' }
+        : me.role === 'admin'
+          ? {}
+          : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] };
+
+    const excludeId =
+      typeof query.excludeId === 'string' && isValidObjectId(query.excludeId) ? query.excludeId : '';
+    if (excludeId) match._id = { $ne: new Types.ObjectId(excludeId) };
+
+    const sampleOne = async (): Promise<Record<string, unknown> | null> => {
+      const [doc] = await QuestionModel.aggregate<Record<string, unknown>>([
+        { $match: match },
+        { $sample: { size: 1 } },
+      ]);
+      return doc ?? null;
+    };
+
+    let item = await sampleOne();
+    if (!item && excludeId) {
+      // 库里仅剩这一条时去掉排除条件重抽，避免"再来一题"报错
+      delete match._id;
+      item = await sampleOne();
+    }
+    if (!item) return reply.status(404).send({ message: '暂无可刷的题目' });
+
+    return {
+      id: String(item._id),
+      title: item.title as string,
+      content: item.content as string,
+      tags: (item.tags as string[]) ?? [],
+      difficulty: item.difficulty as 'easy' | 'medium' | 'hard',
+      creatorName: item.creatorName as string,
+      visibility: item.visibility as 'public' | 'private',
     };
   });
 

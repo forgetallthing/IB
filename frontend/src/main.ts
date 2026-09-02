@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
 import LoginView from './views/LoginView.vue';
 import QuestionListView from './views/QuestionListView.vue';
+import QuestionQuizView from './views/QuestionQuizView.vue';
 import QuestionDetailView from './views/QuestionDetailView.vue';
 import QuestionEditorView from './views/QuestionEditorView.vue';
 import SettingsView from './views/SettingsView.vue';
@@ -14,6 +15,7 @@ const routes = [
   { path: '/', redirect: '/questions' },
   { path: '/login', component: LoginView },
   { path: '/questions', component: QuestionListView },
+  { path: '/quiz', component: QuestionQuizView },
   { path: '/questions/edit', component: QuestionEditorView },
   { path: '/settings', component: SettingsView },
   { path: '/questions/:id', component: QuestionDetailView },

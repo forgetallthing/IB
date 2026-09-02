@@ -16,6 +16,7 @@
 
       <nav class="nav-links">
         <RouterLink to="/questions" @click="closeMenu">笔记中心</RouterLink>
+        <RouterLink to="/quiz" @click="closeMenu">每日刷题</RouterLink>
         <RouterLink to="/questions/edit" @click="closeMenu">笔记编辑</RouterLink>
         <RouterLink to="/settings" @click="closeMenu">设置</RouterLink>
       </nav>

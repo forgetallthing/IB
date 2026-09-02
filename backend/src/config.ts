@@ -27,4 +27,8 @@ export const appConfig = {
   // 微信小程序登录（未配置时微信登录接口返回 501，账号密码登录不受影响）
   wechatAppId: process.env.WECHAT_APPID ?? '',
   wechatSecret: process.env.WECHAT_SECRET ?? '',
+  // Coze 智能体 API（未配置时 AI 分析接口返回 501）
+  cozeApiToken: process.env.COZE_API_TOKEN ?? '',
+  cozeBotId: process.env.COZE_BOT_ID ?? '',
+  cozeApiBase: process.env.COZE_API_BASE ?? 'https://api.coze.cn',
 };
