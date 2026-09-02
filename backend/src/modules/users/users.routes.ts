@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { UserModel } from '../../models/user.model.js';
-import { hashPassword } from '../../services/password.service.js';
+import { hashPassword, verifyPassword } from '../../services/password.service.js';
 
 export async function registerUserRoutes(app: FastifyInstance) {
   async function requireAdmin(request: any, reply: any) {
@@ -91,7 +91,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
     }
 
     if (body.password) {
-      if (!body.currentPassword || user.passwordHash !== hashPassword(body.currentPassword)) {
+      if (!body.currentPassword || !verifyPassword(body.currentPassword, user.passwordHash)) {
         return reply.status(400).send({ message: '当前密码不正确' });
       }
       user.passwordHash = hashPassword(body.password);

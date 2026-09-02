@@ -277,21 +277,23 @@ watch([query, difficulty, visibility, tag], () => {
           </span>
         </button>
 
-        <p class="meta">
-          {{ item.creatorName }}
-          <span v-if="isMine(item)" class="mine-badge">我的</span>
-          · {{ item.visibility === 'public' ? '公开' : '私有' }}
-        </p>
+        <div class="meta-row">
+          <p class="meta">
+            {{ item.creatorName }}
+            <span v-if="isMine(item)" class="mine-badge">我的</span>
+            · {{ item.visibility === 'public' ? '公开' : '私有' }}
+          </p>
+          <div v-if="canMaintain(item) && isExpanded(item.id)" class="card-actions">
+            <button type="button" class="text-btn" @click="editQuestion(item.id)">编辑</button>
+            <span class="sep">·</span>
+            <button type="button" class="text-btn danger-text" @click="deleteQuestion(item.id)">删除</button>
+          </div>
+        </div>
 
         <div class="collapse" :class="{ open: isExpanded(item.id) }">
           <div class="collapse-inner">
             <div class="md-content" :ref="(el) => setContentEl(item.id, el)"></div>
-            <div v-if="canMaintain(item)" class="card-actions">
-              <button type="button" class="text-btn" @click="editQuestion(item.id)">编辑</button>
-              <span class="sep">·</span>
-              <button type="button" class="text-btn danger-text" @click="deleteQuestion(item.id)">删除</button>
-            </div>
-            <p v-else class="maintain-hint">仅创建者或管理员可维护此笔记</p>
+            <p v-if="!canMaintain(item)" class="maintain-hint">仅创建者或管理员可维护此笔记</p>
           </div>
         </div>
       </article>
@@ -461,11 +463,25 @@ watch([query, difficulty, visibility, tag], () => {
   line-height: 1.6;
 }
 
+.meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0;
+}
+
+.meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .card-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
+  flex-shrink: 0;
 }
 
 .text-btn {

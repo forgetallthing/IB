@@ -14,7 +14,43 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       limit?: string;
     };
 
+    // 可见性基线：未登录仅 public；登录的普通用户可见 public + 自己创建的；管理员全部可见
+    let me: { sub?: string; role?: string } | null = null;
+    try {
+      await request.jwtVerify();
+      me = request.user as { sub?: string; role?: string };
+    } catch {
+      // 游客
+    }
+
+    const requested = query.visibility
+      ? Array.isArray(query.visibility)
+        ? query.visibility
+        : [query.visibility]
+      : null;
+
+    let visibilityClause: Record<string, unknown> | null = null;
+    if (!me) {
+      visibilityClause = { visibility: 'public' };
+    } else if (me.role !== 'admin') {
+      // 与显式筛选取交集：public 直接可见，private 仅限自己创建的
+      if (requested) {
+        const clauses: Record<string, unknown>[] = [];
+        if (requested.includes('public')) clauses.push({ visibility: 'public' });
+        if (requested.includes('private')) clauses.push({ visibility: 'private', creatorId: String(me.sub) });
+        visibilityClause = clauses.length ? { $or: clauses } : { _id: { $exists: false } };
+      } else {
+        visibilityClause = { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] };
+      }
+    } else if (requested) {
+      visibilityClause = { visibility: { $in: requested } };
+    }
+
     const filter: Record<string, unknown> = {};
+    if (visibilityClause) {
+      // 用 $and 承载可见性条件，避免与搜索的 $or 冲突
+      filter.$and = [visibilityClause];
+    }
     if (query.q) {
       filter.$or = [
         { title: { $regex: query.q, $options: 'i' } },
@@ -30,10 +66,6 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     }
     if (query.creatorName) {
       filter.creatorName = { $regex: query.creatorName, $options: 'i' };
-    }
-    if (query.visibility) {
-      const visibilities = Array.isArray(query.visibility) ? query.visibility : [query.visibility];
-      filter.visibility = { $in: visibilities };
     }
     if (query.tags) {
       filter.tags = Array.isArray(query.tags) ? { $in: query.tags } : { $in: [query.tags] };
@@ -137,6 +169,18 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     const params = request.params as { id: string };
     const item = await QuestionModel.findById(params.id).lean();
     if (!item) return reply.status(404).send({ message: '笔记不存在' });
+
+    // 与列表接口相同的可见性基线：私有笔记仅创建者和管理员可读
+    let me: { sub?: string; role?: string } | null = null;
+    try {
+      await request.jwtVerify();
+      me = request.user as { sub?: string; role?: string };
+    } catch {
+      // 游客
+    }
+    if (item.visibility === 'private' && me?.role !== 'admin' && String(item.creatorId) !== String(me?.sub)) {
+      return reply.status(403).send({ message: '仅创建者或管理员可以查看该笔记' });
+    }
 
     return {
       id: String(item._id),

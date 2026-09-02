@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { UserModel } from '../../models/user.model.js';
-import { hashPassword } from '../../services/password.service.js';
+import { hashPassword, isLegacyHash, verifyPassword } from '../../services/password.service.js';
 import { appConfig } from '../../config.js';
 
 interface WechatSessionResponse {
@@ -46,8 +46,14 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const user = await UserModel.findOne({ username: body.username, status: 'active' }).exec();
-    if (!user || user.passwordHash !== hashPassword(body.password)) {
+    if (!user || !verifyPassword(body.password, user.passwordHash)) {
       return reply.status(401).send({ message: '用户名或密码错误' });
+    }
+
+    // 旧的无盐 SHA-256 哈希在登录成功后透明升级为 scrypt
+    if (isLegacyHash(user.passwordHash)) {
+      user.passwordHash = hashPassword(body.password);
+      await user.save();
     }
 
     return issueLogin(user, reply);

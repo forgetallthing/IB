@@ -28,14 +28,8 @@ if not exist node_modules (
   )
 )
 
+rem 数据库/AI/种子账号等配置统一在 backend\.env 中设置（不会被 git 提交），此处不再硬编码覆盖
 set "PORT=3000"
-set "MONGO_URI=mongodb://127.0.0.1:27017/interview_bank"
-set "JWT_SECRET=local-dev-secret"
-set "DEEPSEEK_API_KEY=replace-me"
-set "DEEPSEEK_BASE_URL=https://api.deepseek.com"
-set "ADMIN_SEED_USERNAME=admin"
-set "ADMIN_SEED_PASSWORD=admin123456"
-set "ADMIN_SEED_EMAIL=admin@example.com"
 set "VITE_API_BASE_URL=http://localhost:3000/api"
 
 start "IB Backend" cmd /k "cd /d %~dp0backend && npm run dev"
@@ -45,5 +39,5 @@ echo.
 echo Backend: http://localhost:3000/api/health
 echo Frontend: http://localhost:5173
 echo.
-echo Make sure MongoDB is already running on 127.0.0.1:27017.
+echo Database and other settings come from backend\.env (MONGO_URI etc.).
 pause
