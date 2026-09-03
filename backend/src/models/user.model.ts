@@ -10,6 +10,11 @@ const userSchema = new Schema(
     role: { type: String, enum: ['admin', 'member'], required: true },
     status: { type: String, enum: ['active', 'disabled'], required: true, default: 'active' },
     lastLoginAt: { type: Date },
+    // 每日回想筛选偏好（空数组 = 不筛选）
+    quizPrefs: {
+      difficulty: { type: [String], enum: ['easy', 'medium', 'hard'], default: [] },
+      tags: { type: [String], default: [] },
+    },
   },
   { timestamps: true },
 );

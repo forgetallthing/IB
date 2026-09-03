@@ -5,6 +5,8 @@ import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
 import { useToast } from '../composables/useToast';
+import { useAuthStore } from '../stores/auth';
+import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
 
 marked.setOptions({ gfm: true, breaks: true });
 
@@ -19,6 +21,7 @@ interface QuizQuestion {
 }
 
 const { notice, fail } = useToast();
+const auth = useAuthStore();
 const loading = ref(false);
 const question = ref<QuizQuestion | null>(null);
 const showAnswer = ref(false);
@@ -34,6 +37,74 @@ let myVditor: Vditor | null = null;
 let myEditorReady = false;
 
 const difficultyLabels = { easy: '简单', medium: '中等', hard: '困难' } as const;
+
+// 筛选：登录用户的勾选持久化到后台（quiz-prefs），进入页面自动恢复
+const difficultyOptions: CheckOption[] = [
+  { value: 'easy', label: '简单' },
+  { value: 'medium', label: '中等' },
+  { value: 'hard', label: '困难' },
+];
+const showFilter = ref(false);
+const difficultyFilter = ref<string[]>([]);
+const tagFilter = ref<string[]>([]);
+const draftDifficulty = ref<string[]>([]);
+const draftTags = ref<string[]>([]);
+const tagOptions = ref<CheckOption[]>([]);
+const savingPrefs = ref(false);
+
+const activeFilterCount = computed(() => difficultyFilter.value.length + tagFilter.value.length);
+
+function openFilter() {
+  draftDifficulty.value = [...difficultyFilter.value];
+  draftTags.value = [...tagFilter.value];
+  showFilter.value = true;
+}
+
+// 重置：仅清空弹窗内勾选，点「确定」后才应用
+function resetFilter() {
+  draftDifficulty.value = [];
+  draftTags.value = [];
+}
+
+async function applyFilter() {
+  difficultyFilter.value = [...draftDifficulty.value];
+  tagFilter.value = [...draftTags.value];
+  showFilter.value = false;
+
+  if (auth.user) {
+    savingPrefs.value = true;
+    try {
+      await request('/users/me/quiz-prefs', {
+        method: 'PUT',
+        body: JSON.stringify({ difficulty: difficultyFilter.value, tags: tagFilter.value }),
+      });
+    } catch {
+      fail('筛选偏好保存失败');
+    } finally {
+      savingPrefs.value = false;
+    }
+  }
+
+  drawQuestion();
+}
+
+async function loadPrefs() {
+  if (!auth.user) return;
+  try {
+    const prefs = await request<{ difficulty: string[]; tags: string[] }>('/users/me/quiz-prefs');
+    difficultyFilter.value = Array.isArray(prefs.difficulty) ? prefs.difficulty : [];
+    tagFilter.value = Array.isArray(prefs.tags) ? prefs.tags : [];
+  } catch {
+    // 拉取失败（含未登录）时按不筛选处理
+  }
+}
+
+async function loadTagOptions() {
+  const result = await request<Array<{ id: string; name: string; active: boolean; color?: string }>>('/tags');
+  tagOptions.value = result
+    .filter((item) => item.active)
+    .map((item) => ({ value: item.name, label: item.name, color: item.color }));
+}
 
 // 按可见面板数控制网格列数：0 个侧栏时作答占满整行
 const gridClass = computed(() => {
@@ -80,8 +151,12 @@ function clearMyAnswer() {
 async function drawQuestion(excludeId?: string) {
   loading.value = true;
   try {
-    const params = excludeId ? `?excludeId=${encodeURIComponent(excludeId)}` : '';
-    const item = await request<QuizQuestion>(`/questions/random${params}`);
+    const params = new URLSearchParams();
+    if (excludeId) params.set('excludeId', excludeId);
+    difficultyFilter.value.forEach((value) => params.append('difficulty', value));
+    tagFilter.value.forEach((value) => params.append('tags', value));
+    const qs = params.toString();
+    const item = await request<QuizQuestion>(`/questions/random${qs ? `?${qs}` : ''}`);
     question.value = item;
     showAnswer.value = false;
     showAiPanel.value = false;
@@ -145,7 +220,11 @@ watch(aiAnalysis, async (val) => {
   renderMarkdown(aiEl.value, val);
 });
 
-onMounted(() => drawQuestion());
+onMounted(async () => {
+  loadTagOptions().catch(() => {});
+  await loadPrefs();
+  drawQuestion();
+});
 
 onBeforeUnmount(() => {
   myVditor?.destroy();
@@ -161,6 +240,9 @@ onBeforeUnmount(() => {
         <p class="subtitle">随机抽取笔记，先自己回想作答，再对照参考详情。</p>
       </div>
       <div class="header-actions">
+        <button type="button" class="secondary" :class="{ 'filter-on': activeFilterCount }" @click="openFilter">
+          筛选<template v-if="activeFilterCount"> · {{ activeFilterCount }}</template>
+        </button>
         <button type="button" class="secondary" :disabled="analyzing || !question" @click="runAiReview">
           {{ analyzing ? 'AI 分析中…' : 'AI 分析' }}
         </button>
@@ -206,6 +288,26 @@ onBeforeUnmount(() => {
         </section>
       </div>
     </template>
+
+    <!-- 筛选弹窗：勾选只作用于抽取范围，不改变列表页筛选 -->
+    <Teleport to="body">
+      <Transition name="quiz-filter-fade">
+        <div v-if="showFilter" class="quiz-filter-backdrop" @click.self="showFilter = false">
+          <div class="quiz-filter-dialog" role="dialog" aria-modal="true" aria-label="筛选">
+            <h3>筛选</h3>
+            <p class="filter-hint">仅抽取符合条件的内容，全部留空表示不限制</p>
+            <FilterCheckGroup v-model="draftDifficulty" label="难度" :options="difficultyOptions" />
+            <FilterCheckGroup v-model="draftTags" label="标签" :options="tagOptions" />
+            <div class="filter-actions">
+              <button type="button" class="btn-ghost" @click="resetFilter">重置</button>
+              <span class="spacer"></span>
+              <button type="button" class="btn-cancel" @click="showFilter = false">取消</button>
+              <button type="button" class="btn-primary" :disabled="savingPrefs" @click="applyFilter">确定</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </section>
 </template>
 
@@ -395,5 +497,139 @@ onBeforeUnmount(() => {
   margin: 8px 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+/* 筛选按钮激活态：teal 描边提示当前有筛选条件 */
+.filter-on {
+  border-color: #5eaaa0;
+  color: #0f766e;
+}
+
+/* 筛选弹窗（风格对齐全局确认弹窗） */
+.quiz-filter-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 30, 40, 0.4);
+  backdrop-filter: blur(6px);
+}
+
+.quiz-filter-dialog {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 24px 24px 20px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  box-shadow: 0 24px 64px rgba(15, 30, 40, 0.28);
+}
+
+.quiz-filter-dialog h3 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.filter-hint {
+  margin: -6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.filter-actions .spacer {
+  flex: 1;
+}
+
+.btn-ghost {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(13, 148, 136, 0.16);
+}
+
+.btn-cancel,
+.btn-primary {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.btn-cancel:hover {
+  background: rgba(15, 42, 58, 0.06);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.22);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.btn-ghost:focus-visible,
+.btn-cancel:focus-visible,
+.btn-primary:focus-visible {
+  outline: 2px solid rgba(13, 148, 136, 0.55);
+  outline-offset: 2px;
+}
+
+.quiz-filter-fade-enter-active {
+  transition: opacity 0.2s ease;
+}
+
+.quiz-filter-fade-enter-active .quiz-filter-dialog {
+  animation: quiz-filter-pop 0.24s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.quiz-filter-fade-leave-active {
+  transition: opacity 0.16s ease;
+}
+
+.quiz-filter-fade-enter-from,
+.quiz-filter-fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes quiz-filter-pop {
+  from {
+    transform: scale(0.92) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 </style>

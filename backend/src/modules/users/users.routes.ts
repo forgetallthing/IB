@@ -116,6 +116,61 @@ export async function registerUserRoutes(app: FastifyInstance) {
     };
   });
 
+  // 每日回想筛选偏好：登录用户的筛选条件持久化到后台，进入页面时恢复
+  const QUIZ_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+
+  app.get('/api/users/me/quiz-prefs', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const me = request.user as { sub?: string };
+    const user = await UserModel.findById(me.sub).lean();
+    if (!user) {
+      return reply.status(404).send({ message: '用户不存在' });
+    }
+
+    const prefs = (user as { quizPrefs?: { difficulty?: string[]; tags?: string[] } }).quizPrefs;
+    return { difficulty: prefs?.difficulty ?? [], tags: prefs?.tags ?? [] };
+  });
+
+  app.put('/api/users/me/quiz-prefs', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const me = request.user as { sub?: string };
+    const body = request.body as { difficulty?: unknown; tags?: unknown };
+
+    // 过滤非法值：难度仅允许枚举值，标签最多 20 个
+    const difficulty = Array.isArray(body.difficulty)
+      ? body.difficulty.filter(
+          (item): item is (typeof QUIZ_DIFFICULTIES)[number] =>
+            typeof item === 'string' && (QUIZ_DIFFICULTIES as readonly string[]).includes(item),
+        )
+      : [];
+    const tags = Array.isArray(body.tags)
+      ? body.tags
+          .filter((item): item is string => typeof item === 'string')
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .slice(0, 20)
+      : [];
+
+    const user = await UserModel.findById(me.sub);
+    if (!user) {
+      return reply.status(404).send({ message: '用户不存在' });
+    }
+
+    user.quizPrefs = { difficulty: [...difficulty], tags: [...tags] };
+    await user.save();
+    return { difficulty: [...difficulty], tags: [...tags] };
+  });
+
   app.post('/api/users', async (request, reply) => {
     const rejected = await requireAdmin(request, reply);
     if (rejected) return rejected;

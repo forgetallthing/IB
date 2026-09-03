@@ -131,7 +131,11 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       // 游客
     }
 
-    const query = request.query as { excludeId?: string };
+    const query = request.query as {
+      excludeId?: string;
+      difficulty?: string | string[];
+      tags?: string | string[];
+    };
 
     const match: Record<string, unknown> =
       !me
@@ -139,6 +143,16 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         : me.role === 'admin'
           ? {}
           : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] };
+
+    // 筛选条件（与列表接口相同的 $in 语义：任一匹配）
+    if (query.difficulty) {
+      const difficulties = Array.isArray(query.difficulty) ? query.difficulty : [query.difficulty];
+      if (difficulties.length) match.difficulty = { $in: difficulties };
+    }
+    if (query.tags) {
+      const tags = Array.isArray(query.tags) ? query.tags : [query.tags];
+      if (tags.length) match.tags = { $in: tags };
+    }
 
     const excludeId =
       typeof query.excludeId === 'string' && isValidObjectId(query.excludeId) ? query.excludeId : '';
