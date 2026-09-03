@@ -90,6 +90,23 @@ function logout() {
   router.push('/login');
 }
 
+// 清除当前用户的每日回想权重（出现次数与手动档位）
+async function clearQuizState() {
+  const ok = await showConfirm({
+    title: '清除回想权重',
+    message: '将清空你所有笔记的出现次数与手动档位（不影响笔记本身），清除后所有笔记重新按高优先级推送。确定清除吗？',
+    confirmText: '清除',
+    danger: true,
+  });
+  if (!ok) return;
+  try {
+    const result = await request<{ cleared: number }>('/users/me/quiz-state', { method: 'DELETE' });
+    notice(`已清除 ${result.cleared} 条回想记录`);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : '清除失败');
+  }
+}
+
 async function loadUsers() {
   users.value = await request<UserItem[]>('/users');
 }
@@ -382,6 +399,12 @@ onMounted(refresh);
         </label>
       </div>
       <button type="button" @click="saveProfile">更新密码</button>
+
+      <h2>每日回想</h2>
+      <div class="account-row">
+        <p>清除后所有笔记的出现次数与手动档位将归零，重新按高优先级推送（不影响笔记内容）。</p>
+        <button class="danger" type="button" @click="clearQuizState">清除我的回想权重</button>
+      </div>
 
       <h2>账户</h2>
       <div class="account-row">

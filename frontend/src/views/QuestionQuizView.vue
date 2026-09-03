@@ -18,6 +18,9 @@ interface QuizQuestion {
   difficulty: 'easy' | 'medium' | 'hard';
   creatorName: string;
   visibility: 'public' | 'private';
+  // 出现次数：决定推送权重；完全掌握后不再推送
+  drawCount: number;
+  mastered: boolean;
 }
 
 const { notice, fail } = useToast();
@@ -104,6 +107,34 @@ async function loadTagOptions() {
   tagOptions.value = result
     .filter((item) => item.active)
     .map((item) => ({ value: item.name, label: item.name, color: item.color }));
+}
+
+// 回想自评反馈：直接调整推送权重
+const feedbackSaving = ref(false);
+
+// 反馈后的提示文案
+const FEEDBACK_NOTICES: Record<string, string> = {
+  forgot: '已记录：没记住，这篇会尽快再次出现',
+  fuzzy: '已记录：模糊，出现频率保持不变',
+  known: '已记录：记住了，出现频率会降低',
+  mastered: '已标记为完全掌握，之后不再推送这篇',
+};
+
+async function submitFeedback(feedback: 'known' | 'fuzzy' | 'forgot' | 'mastered') {
+  if (!question.value || feedbackSaving.value) return;
+  feedbackSaving.value = true;
+  try {
+    const result = await request<{ drawCount: number; mastered: boolean }>(
+      `/questions/${question.value.id}/quiz-feedback`,
+      { method: 'POST', body: JSON.stringify({ feedback }) },
+    );
+    question.value = { ...question.value, drawCount: result.drawCount, mastered: result.mastered };
+    notice(FEEDBACK_NOTICES[feedback]);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : '反馈保存失败');
+  } finally {
+    feedbackSaving.value = false;
+  }
 }
 
 // 按可见面板数控制网格列数：0 个侧栏时作答占满整行
@@ -265,7 +296,7 @@ onBeforeUnmount(() => {
         </div>
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div class="question-title" v-html="titleHtml"></div>
-        <p class="meta">来自 {{ question.creatorName }} 的笔记 · {{ question.visibility === 'public' ? '公开' : '私有' }}</p>
+        <p class="meta">来自 {{ question.creatorName }} 的笔记 · {{ question.visibility === 'public' ? '公开' : '私有' }} · 出现 {{ question.drawCount }} 次</p>
       </article>
 
       <div class="quiz-grid" :class="gridClass">
@@ -280,6 +311,48 @@ onBeforeUnmount(() => {
         <section v-if="showAnswer" class="panel side answer-side">
           <p class="side-label">参考详情</p>
           <div ref="answerEl" class="md-content"></div>
+          <!-- 回想自评反馈：直接调整推送权重 -->
+          <div v-if="auth.user" class="feedback-bar">
+            <span class="feedback-hint">对照后回忆得怎么样？</span>
+            <div class="feedback-actions">
+              <button
+                type="button"
+                class="fb-btn fb-forgot"
+                :disabled="feedbackSaving"
+                title="立即回到最优先推送"
+                @click="submitFeedback('forgot')"
+              >
+                没记住
+              </button>
+              <button
+                type="button"
+                class="fb-btn fb-fuzzy"
+                :disabled="feedbackSaving"
+                title="推送频率基本不变"
+                @click="submitFeedback('fuzzy')"
+              >
+                模糊
+              </button>
+              <button
+                type="button"
+                class="fb-btn fb-known"
+                :disabled="feedbackSaving"
+                title="降低推送频率"
+                @click="submitFeedback('known')"
+              >
+                记住了
+              </button>
+              <button
+                type="button"
+                class="fb-btn fb-mastered"
+                :disabled="feedbackSaving"
+                title="不再推送这篇笔记"
+                @click="submitFeedback('mastered')"
+              >
+                完全掌握
+              </button>
+            </div>
+          </div>
         </section>
 
         <section class="panel side input-side">
@@ -491,6 +564,90 @@ onBeforeUnmount(() => {
   padding: 0;
   background: none;
   line-height: 1.6;
+}
+
+/* 回想自评反馈条：贴在详情内容底部，不随内容滚动 */
+.feedback-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px 2px;
+  margin-top: 8px;
+  background: var(--surface);
+  border-top: 1px solid var(--line-soft);
+}
+
+.feedback-hint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.feedback-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.fb-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+/* 覆盖全局 button:hover 的 teal 实心背景，保持浅色胶囊风格 */
+.fb-btn:hover:not(:disabled),
+.fb-btn:active:not(:disabled) {
+  box-shadow: none;
+}
+
+.fb-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.fb-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.fb-forgot {
+  color: #c24545;
+  background: rgba(217, 95, 95, 0.1);
+}
+
+.fb-forgot:hover:not(:disabled) {
+  background: rgba(217, 95, 95, 0.2);
+}
+
+.fb-fuzzy {
+  color: #b45309;
+  background: rgba(180, 83, 9, 0.1);
+}
+
+.fb-fuzzy:hover:not(:disabled) {
+  background: rgba(180, 83, 9, 0.18);
+}
+
+.fb-known {
+  color: #0f766e;
+  background: rgba(13, 148, 136, 0.12);
+}
+
+.fb-known:hover:not(:disabled) {
+  background: rgba(13, 148, 136, 0.22);
+}
+
+.fb-mastered {
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.12);
+}
+
+.fb-mastered:hover:not(:disabled) {
+  background: rgba(100, 116, 139, 0.22);
 }
 
 .empty {

@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
 import LoginView from './views/LoginView.vue';
+import DashboardView from './views/DashboardView.vue';
 import QuestionListView from './views/QuestionListView.vue';
 import QuestionQuizView from './views/QuestionQuizView.vue';
 import QuestionDetailView from './views/QuestionDetailView.vue';
@@ -12,8 +13,9 @@ import { useAuthStore } from './stores/auth';
 import './styles.css';
 
 const routes = [
-  { path: '/', redirect: '/questions' },
+  { path: '/', redirect: '/dashboard' },
   { path: '/login', component: LoginView },
+  { path: '/dashboard', component: DashboardView },
   { path: '/questions', component: QuestionListView },
   { path: '/quiz', component: QuestionQuizView },
   { path: '/questions/edit', component: QuestionEditorView },
@@ -36,7 +38,7 @@ router.beforeEach((to) => {
   }
 
   if (authStore.token && to.path === '/login') {
-    return { path: '/questions' };
+    return { path: '/dashboard' };
   }
 
   return true;

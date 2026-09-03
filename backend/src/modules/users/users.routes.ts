@@ -1,5 +1,9 @@
 import { FastifyInstance } from 'fastify';
+import { Types } from 'mongoose';
 import { UserModel } from '../../models/user.model.js';
+import { QuestionModel } from '../../models/question.model.js';
+import { QuizStateModel, autoLevelByDrawCount } from '../../models/quizState.model.js';
+import { QuizLogModel } from '../../models/quizLog.model.js';
 import { hashPassword, verifyPassword } from '../../services/password.service.js';
 
 export async function registerUserRoutes(app: FastifyInstance) {
@@ -169,6 +173,182 @@ export async function registerUserRoutes(app: FastifyInstance) {
     user.quizPrefs = { difficulty: [...difficulty], tags: [...tags] };
     await user.save();
     return { difficulty: [...difficulty], tags: [...tags] };
+  });
+
+  // 清除当前用户的每日回想权重（出现次数与手动档位），不影响笔记本身
+  app.delete('/api/users/me/quiz-state', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const me = request.user as { sub?: string };
+    const result = await QuizStateModel.deleteMany({ userId: me.sub });
+    return { cleared: result.deletedCount ?? 0 };
+  });
+
+  // 学习主页聚合数据：我的笔记概览 + 今日回想 + 最近回想记录（统计明细见 quiz-stats 接口）
+  app.get('/api/users/me/dashboard', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const me = request.user as { sub?: string };
+    const userIdObj = new Types.ObjectId(me.sub);
+    const creatorId = String(me.sub);
+
+    // UTC+8 的"今日"起点
+    const now = new Date();
+    const todayKey = new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const todayStartUtcMs = Date.parse(`${todayKey}T00:00:00+08:00`);
+
+    const [noteTotal, publicCount, privateCount, todayReviews, recentLogs] = await Promise.all([
+      QuestionModel.countDocuments({ creatorId }),
+      QuestionModel.countDocuments({ creatorId, visibility: 'public' }),
+      QuestionModel.countDocuments({ creatorId, visibility: 'private' }),
+      QuizLogModel.countDocuments({ userId: userIdObj, action: 'review', createdAt: { $gte: new Date(todayStartUtcMs) } }),
+      QuizLogModel.aggregate<{
+        _id: unknown;
+        questionId: unknown;
+        feedback: string | null;
+        createdAt: Date;
+        title?: string | null;
+      }>([
+        { $match: { userId: userIdObj, action: 'review' } },
+        { $sort: { createdAt: -1 } },
+        { $limit: 8 },
+        {
+          $lookup: {
+            from: 'questions',
+            localField: 'questionId',
+            foreignField: '_id',
+            as: 'question',
+          },
+        },
+        { $addFields: { title: { $first: '$question.title' } } },
+        { $project: { questionId: 1, feedback: 1, createdAt: 1, title: 1 } },
+      ]),
+    ]);
+
+    return {
+      noteTotal,
+      publicCount,
+      privateCount,
+      todayReviews,
+      recent: recentLogs
+        .filter((log) => typeof log.title === 'string')
+        .map((log) => ({
+          questionId: String(log.questionId),
+          title: log.title as string,
+          feedback: log.feedback ?? null,
+          createdAt: log.createdAt,
+        })),
+    };
+  });
+
+  // 学习统计：累计回想/自评分布、连续打卡、最近 105 天打卡热力图、档位分布、薄弱标签
+  // 日期分组统一使用 UTC+8（用户群固定国内）
+  app.get('/api/users/me/quiz-stats', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const me = request.user as { sub?: string; role?: string };
+    const userIdObj = new Types.ObjectId(me.sub);
+    const fmtDate = (d: Date) => new Date(d.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const since = new Date(Date.now() - 105 * 24 * 60 * 60 * 1000);
+
+    const [calendar, feedbacks, weakRows, states, visibleCount] = await Promise.all([
+      // 打卡热力图：最近 105 天每天的回想（抽中）次数
+      QuizLogModel.aggregate<{ date: string; count: number }>([
+        { $match: { userId: userIdObj, action: 'draw', createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: '+08:00' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $project: { _id: 0, date: '$_id', count: 1 } },
+        { $sort: { date: 1 } },
+      ]),
+      // 自评反馈分布（全部时间）
+      QuizLogModel.aggregate<{ _id: string | null; count: number }>([
+        { $match: { userId: userIdObj, action: 'review' } },
+        { $group: { _id: '$feedback', count: { $sum: 1 } } },
+      ]),
+      // 薄弱标签：自评日志 join 笔记标签，没记住/模糊占比越高越薄弱
+      QuizLogModel.aggregate<{ tag: string; total: number; known: number; fuzzy: number; forgot: number }>([
+        { $match: { userId: userIdObj, action: 'review' } },
+        { $lookup: { from: 'questions', localField: 'questionId', foreignField: '_id', as: 'question' } },
+        { $addFields: { question: { $first: '$question' } } },
+        { $unwind: { path: '$question.tags', preserveNullAndEmptyArrays: false } },
+        {
+          $group: {
+            _id: '$question.tags',
+            total: { $sum: 1 },
+            known: { $sum: { $cond: [{ $eq: ['$feedback', 'known'] }, 1, 0] } },
+            fuzzy: { $sum: { $cond: [{ $eq: ['$feedback', 'fuzzy'] }, 1, 0] } },
+            forgot: { $sum: { $cond: [{ $eq: ['$feedback', 'forgot'] }, 1, 0] } },
+          },
+        },
+        { $project: { _id: 0, tag: '$_id', total: 1, known: 1, fuzzy: 1, forgot: 1 } },
+      ]),
+      // 当前推送频率分布（完全掌握 + 按出现次数的自动档位）
+      QuizStateModel.find({ userId: userIdObj }).select('drawCount mastered').lean(),
+      // 可见题目总数（用于"未出现"计数）
+      QuestionModel.countDocuments(
+        me.role === 'admin'
+          ? {}
+          : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] },
+      ),
+    ]);
+
+    const feedbackOf = (name: string) => feedbacks.find((item) => item._id === name)?.count ?? 0;
+    const reviewTotal = feedbacks.reduce((sum, item) => sum + item.count, 0);
+    const drawTotal = await QuizLogModel.countDocuments({ userId: userIdObj, action: 'draw' });
+
+    // 连续打卡：今天未回想不打断连续，从昨天往前数
+    const activeDays = new Set(calendar.map((item) => item.date));
+    const cursor = new Date();
+    if (!activeDays.has(fmtDate(cursor))) cursor.setDate(cursor.getDate() - 1);
+    let streak = 0;
+    while (activeDays.has(fmtDate(cursor))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    const levelDist = [0, 1, 2, 3, 4].map((level) => ({ level, count: 0 }));
+    for (const state of states) {
+      const level = state.mastered === true ? 0 : autoLevelByDrawCount(state.drawCount ?? 0);
+      const bucket = levelDist[level];
+      if (bucket) bucket.count += 1;
+    }
+    const unseen = Math.max(0, visibleCount - states.length);
+
+    const weakTags = weakRows
+      .filter((row) => row.total >= 2)
+      .map((row) => ({ ...row, score: (row.forgot + 0.5 * row.fuzzy) / row.total }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    return {
+      drawTotal,
+      reviewTotal,
+      knownCount: feedbackOf('known'),
+      fuzzyCount: feedbackOf('fuzzy'),
+      forgotCount: feedbackOf('forgot'),
+      streak,
+      calendar,
+      levelDist,
+      unseen,
+      weakTags,
+    };
   });
 
   app.post('/api/users', async (request, reply) => {

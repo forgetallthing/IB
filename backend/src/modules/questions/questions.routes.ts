@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { Types, isValidObjectId } from 'mongoose';
 import { QuestionModel } from '../../models/question.model.js';
+import { QuizStateModel, levelWeight, autoLevelByDrawCount } from '../../models/quizState.model.js';
+import { QuizLogModel } from '../../models/quizLog.model.js';
 
 export async function registerQuestionRoutes(app: FastifyInstance) {
   app.get('/api/questions', async (request) => {
@@ -121,7 +123,9 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     };
   });
 
-  // 随机抽题：与列表接口相同的可见性基线；excludeId 供"再来一题"避开当前题
+  // 随机抽题：与列表接口相同的可见性基线；excludeId 供"再来一篇"避开当前题。
+  // 权重规则：登录用户按 出现次数 自动降权（次数越多权重越低、没出现过的优先），
+  // 自评反馈直接调整出现次数；「完全掌握」通过自评设置，不再推送。
   app.get('/api/questions/random', async (request, reply) => {
     let me: { sub?: string; role?: string } | null = null;
     try {
@@ -156,32 +160,158 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
 
     const excludeId =
       typeof query.excludeId === 'string' && isValidObjectId(query.excludeId) ? query.excludeId : '';
-    if (excludeId) match._id = { $ne: new Types.ObjectId(excludeId) };
 
-    const sampleOne = async (): Promise<Record<string, unknown> | null> => {
-      const [doc] = await QuestionModel.aggregate<Record<string, unknown>>([
+    type Candidate = { id: string; drawCount: number; mastered: boolean };
+    let candidates: Candidate[] = [];
+
+    if (me) {
+      // 登录用户：join 自身的回想状态计算权重
+      const userIdObj = new Types.ObjectId(me.sub);
+      const rows = await QuestionModel.aggregate<{
+        _id: unknown;
+        drawCount?: number;
+        mastered?: boolean;
+      }>([
         { $match: match },
-        { $sample: { size: 1 } },
+        {
+          $lookup: {
+            from: 'quizstates',
+            let: { qid: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $and: [{ $eq: ['$questionId', '$$qid'] }, { $eq: ['$userId', userIdObj] }] },
+                },
+              },
+              { $project: { drawCount: 1, mastered: 1 } },
+            ],
+            as: 'state',
+          },
+        },
+        { $addFields: { state: { $first: '$state' } } },
+        {
+          $project: {
+            _id: 1,
+            drawCount: { $ifNull: ['$state.drawCount', 0] },
+            mastered: '$state.mastered',
+          },
+        },
       ]);
-      return doc ?? null;
-    };
 
-    let item = await sampleOne();
-    if (!item && excludeId) {
-      // 库里仅剩这一条时去掉排除条件重抽，避免"再来一题"报错
-      delete match._id;
-      item = await sampleOne();
+      candidates = rows.map((row) => ({
+        id: String(row._id),
+        drawCount: row.drawCount ?? 0,
+        mastered: row.mastered === true,
+      }));
+    } else {
+      // 游客：没有个人权重，全部按"优先推荐"等概率抽取
+      const rows = await QuestionModel.find(match).select('_id').lean();
+      candidates = (rows as Array<{ _id: unknown }>).map((row) => ({
+        id: String(row._id),
+        drawCount: 0,
+        mastered: false,
+      }));
     }
-    if (!item) return reply.status(404).send({ message: '暂无可刷的题目' });
+
+    // 完全掌握不进入候选；"再来一篇"时避开当前题，仅剩一篇可推时允许重复
+    let pool = candidates.filter((candidate) => !candidate.mastered);
+    const withoutExcluded = excludeId ? pool.filter((candidate) => candidate.id !== excludeId) : pool;
+    if (withoutExcluded.length) pool = withoutExcluded;
+
+    if (!pool.length) {
+      const allMastered = candidates.length > 0 && candidates.every((candidate) => candidate.mastered);
+      return reply.status(404).send({
+        message: allMastered
+          ? '可见的笔记都已标记为完全掌握，可到设置页清除回想权重'
+          : '暂无可回想的内容',
+      });
+    }
+
+    // 按出现次数映射的权重随机抽取（加权轮盘）
+    const totalWeight = pool.reduce((sum, candidate) => sum + levelWeight(autoLevelByDrawCount(candidate.drawCount)), 0);
+    const first = pool[0];
+    if (!first) return reply.status(404).send({ message: '暂无可回想的内容' });
+    let picked = first;
+    if (totalWeight > 0) {
+      let roll = Math.random() * totalWeight;
+      for (const candidate of pool) {
+        roll -= levelWeight(autoLevelByDrawCount(candidate.drawCount));
+        if (roll < 0) {
+          picked = candidate;
+          break;
+        }
+      }
+    }
+
+    const item = await QuestionModel.findById(picked.id).lean();
+    if (!item) return reply.status(404).send({ message: '暂无可回想的内容' });
+
+    // 抽中计数：出现次数 +1，并记录回想日志供统计使用
+    if (me) {
+      await QuizStateModel.updateOne(
+        { userId: new Types.ObjectId(me.sub), questionId: picked.id },
+        { $inc: { drawCount: 1 }, $set: { lastDrawAt: new Date() } },
+        { upsert: true },
+      );
+      await QuizLogModel.create({ userId: me.sub, questionId: picked.id, action: 'draw' });
+    }
 
     return {
       id: String(item._id),
-      title: item.title as string,
-      content: item.content as string,
+      title: item.title,
+      content: item.content,
       tags: (item.tags as string[]) ?? [],
       difficulty: item.difficulty as 'easy' | 'medium' | 'hard',
       creatorName: item.creatorName as string,
       visibility: item.visibility as 'public' | 'private',
+      drawCount: picked.drawCount,
+      mastered: picked.mastered,
+    };
+  });
+
+  // 回想自评反馈：直接调整推送权重——没记住清零回优先推荐、模糊+1、记住了+2、完全掌握不再推送
+  app.post('/api/questions/:id/quiz-feedback', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const params = request.params as { id: string };
+    const body = request.body as { feedback?: string };
+    const feedback = body.feedback;
+    if (feedback !== 'known' && feedback !== 'fuzzy' && feedback !== 'forgot' && feedback !== 'mastered') {
+      return reply.status(400).send({ message: '反馈类型不合法' });
+    }
+    if (!isValidObjectId(params.id)) {
+      return reply.status(400).send({ message: '笔记不存在' });
+    }
+
+    const me = request.user as { sub?: string };
+    const userIdObj = new Types.ObjectId(me.sub);
+    const filter = { userId: userIdObj, questionId: params.id };
+
+    const update: Record<string, unknown> = {};
+    if (feedback === 'forgot') {
+      // 没记住：出现次数清零，回到优先推荐
+      update.$set = { drawCount: 0, mastered: false };
+    } else if (feedback === 'fuzzy') {
+      update.$inc = { drawCount: 1 };
+      update.$set = { mastered: false };
+    } else if (feedback === 'known') {
+      update.$inc = { drawCount: 2 };
+      update.$set = { mastered: false };
+    } else {
+      // 完全掌握：不再推送
+      update.$set = { mastered: true };
+    }
+
+    const newState = await QuizStateModel.findOneAndUpdate(filter, update, { upsert: true, new: true }).lean();
+    await QuizLogModel.create({ userId: userIdObj, questionId: params.id, action: 'review', feedback });
+
+    return {
+      drawCount: newState?.drawCount ?? 0,
+      mastered: newState?.mastered === true,
     };
   });
 
