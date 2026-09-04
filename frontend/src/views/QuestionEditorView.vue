@@ -101,6 +101,26 @@ function destroyEditors() {
   pendingContent = null;
 }
 
+/** 图片上传配置：标题与正文编辑器共用，粘贴/拖拽/选择图片统一走 /api/images */
+function makeUploadConfig(insert: (markdown: string) => void) {
+  return {
+    multiple: false,
+    accept: 'image/*',
+    max: 10 * 1024 * 1024,
+    handler: async (files: File[]) => {
+      const file = files[0];
+      if (!file) return null;
+      try {
+        const url = await uploadImage(file);
+        insert(`![${file.name}](${url})\n`);
+      } catch (error) {
+        fail(error instanceof Error ? error.message : '图片上传失败');
+      }
+      return null;
+    },
+  };
+}
+
 function initTitleEditor() {
   if (!titleEditorRef.value || titleVditor) return;
   titleVditor = new Vditor(titleEditorRef.value, {
@@ -111,6 +131,7 @@ function initTitleEditor() {
     cache: { enable: false },
     cdn: '/vditor',
     link: { isOpen: true },
+    upload: makeUploadConfig((markdown) => titleVditor?.insertValue(markdown)),
     value: form.title,
     input: (value) => {
       form.title = value.trim();
@@ -135,23 +156,7 @@ function initContentEditor() {
     cache: { enable: false },
     cdn: '/vditor',
     link: { isOpen: true },
-    value: form.content,
-    upload: {
-      multiple: false,
-      accept: 'image/*',
-      max: 10 * 1024 * 1024,
-      handler: async (files: File[]) => {
-        const file = files[0];
-        if (!file) return null;
-        try {
-          const url = await uploadImage(file);
-          contentVditor?.insertValue(`![${file.name}](${url})\n`);
-        } catch (error) {
-          fail(error instanceof Error ? error.message : '图片上传失败');
-        }
-        return null;
-      },
-    },
+    upload: makeUploadConfig((markdown) => contentVditor?.insertValue(markdown)),
     input: (value) => {
       form.content = value;
     },
