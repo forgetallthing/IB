@@ -4,11 +4,15 @@
 
 ## 功能特性
 
-- **笔记管理**：Vditor Markdown 编辑器（标题与正文）、全站 Markdown 渲染、列表默认折叠答案、多条件勾选筛选（标签 / 难度 / 可见性，均支持多选）
+- **笔记管理**：Vditor Markdown 编辑器（标题与正文，均支持粘贴/拖拽/选择图片上传）、全站 Markdown 渲染、列表默认折叠答案、多条件勾选筛选（标签 / 难度 / 可见性，均支持多选且本地记忆）
+- **每日回想**：间隔重复学习系统——按出现次数加权随机抽题（越陌生越优先），对照回忆后自评反馈（没记住清零重推 / 模糊 +1 / 记住了 +2 / 完全掌握不再推送）；点击自评选项才计一次完整回想；支持手动档位（1-4 档重置出现次数并恢复自动调节，0 档完全掌握锁定）
+- **数据看板**：统计卡（今日回想/累计回想/连续打卡/完全掌握）、GitHub 风格回想热力图（53 周，四档色阶，今天固定最右）、近 7 天趋势、推送频率分布、薄弱标签 Top 5、自评反馈分布、我的笔记统计；PC/Pad 一屏锁定不滚动
+- **图片上传**：MongoDB GridFS 存储，标题/正文统一走 `/api/images`，小程序端渲染时自动补全绝对地址
 - **标签体系**：自定义标签（颜色、描述、排序），支持启用/停用，可随笔记归档
-- **AI 辅助**：基于 DeepSeek 自动生成内容摘要、建议标签与难度
-- **多用户**：JWT 登录；管理员可管理用户（创建/禁用/重置密码），普通用户可在「系统设置」修改自己的用户名密码
-- **权限分层**：用户管理 / 标签管理 / 导入导出仅管理员可见；个人工作台所有用户可用
+- **AI 辅助**：基于 Coze 智能体自动生成内容摘要、建议标签与难度（未配置凭证时功能提示不可用）
+- **多用户**：JWT 登录（scrypt 密码哈希）；管理员可管理用户（创建/禁用/重置密码），普通用户可在「系统设置」修改自己的用户名密码
+- **权限分层**：用户管理 / 标签管理 / 导入导出仅管理员可见；个人工作台与数据看板所有用户可用
+- **多端**：Web（响应式）+ 微信小程序（Taro），数据互通
 - **数据导入导出**：JSON 格式，管理员操作
 - **提示体验**：全局右上角 Toast 通知、自定义确认弹窗
 
@@ -32,7 +36,9 @@ IB/
 │   ├── public/vditor/      # Vditor 静态资源（postinstall 自动复制）
 │   └── scripts/copy-vditor.mjs
 ├── backend/                # Fastify 后端
-│   └── src/modules/        # auth / users / questions / tags / import-export / ai
+│   ├── src/modules/        # auth / users / questions / tags / import-export / ai / images
+│   ├── src/services/       # imageStore（GridFS 图片存取）
+│   └── src/models/         # question / tag / user / quizState（回想权重状态）/ quizLog（回想日志）
 ├── docker/nginx.conf       # nginx 配置（HTTPS + SPA 回退 + /api 反代）
 ├── Dockerfile              # 多阶段构建（build → backend → web）
 ├── docker-compose.yml      # 三容器编排

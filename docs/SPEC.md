@@ -8,7 +8,9 @@
 
 - 支持账号登录和权限控制。
 - 支持题目的创建、编辑、浏览、搜索、筛选和删除。
-- 支持纯文本内容展示。
+- 支持 Markdown 内容展示与图片上传（MongoDB GridFS 存储）。
+- 支持每日回想（间隔重复学习）：加权抽题、自评反馈调频、回想统计。
+- 支持数据看板：回想热力图、趋势、分布与薄弱标签统计。
 - 支持 AI 辅助生成标签、摘要和难度建议。
 - 支持导入、导出和 Docker 部署。
 - 支持 PC、Pad 和手机端响应式适配。
@@ -63,7 +65,7 @@ flowchart LR
   Browser[Browser / Mobile / Pad] --> Web[Vue 3 Frontend]
   Web --> Api[Node.js API]
   Api --> Mongo[(MongoDB)]
-  Api --> AI[DeepSeek API]
+  Api --> AI[Coze 智能体 API]
   Web --> LocalRunner[Browser-side JS demo runner]
 ```
 
@@ -127,14 +129,68 @@ flowchart LR
 #### 约束
 
 - 标题必填。
-- 题干和答案使用纯文本。
+- 题干和答案为 Markdown 文本，支持内联图片（`/api/images/<id>` 引用，见 4.5）。
 - 私有题目仅创建者和 admin 可见。
 - 不保留版本历史。
 - 删除采用硬删除，不提供回收站。
 
-### 4.3 ImportExportJob
+### 4.3 QuizState（每日回想状态，按 用户 × 题目 维度）
 
-如后续需要异步导入导出，可增加任务表；第一版也可以同步完成并跳过该模型。
+```ts
+{
+  _id: string;
+  userId: string;          // 联合唯一索引 (userId, questionId)
+  questionId: string;
+  drawCount: number;       // 出现次数：越多权重越低；自评反馈直接调整此值
+  lastDrawAt?: Date;
+  mastered: boolean;       // 完全掌握：仅通过自评反馈设置，不再推送
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+#### 权重算法（`models/quizState.model.ts`）
+
+```ts
+// 等级 → 抽取权重
+QUIZ_LEVEL_WEIGHTS = { 0: 0, 1: 8, 2: 25, 3: 50, 4: 100 };
+
+// 出现次数 → 自动档位
+autoLevelByDrawCount(drawCount):
+  0 次 → 4（优先推荐）; 1-2 次 → 3（常规复习）; 3-5 次 → 2（继续巩固）; 6+ 次 → 1（低频回顾）
+```
+
+- 抽题：候选池按 `levelWeight(autoLevelByDrawCount(drawCount))` 加权轮盘随机；`mastered=true` 直接排除。
+- 自评反馈（`POST /api/questions/:id/quiz-feedback`）：
+  - `forgot`（没记住）：`drawCount = 0`，`mastered = false` → 立即回到最优先推送
+  - `fuzzy`（模糊）：`drawCount += 1` → 推送频率基本不变
+  - `known`（记住了）：`drawCount += 2` → 降低推送频率
+  - `mastered`（完全掌握）：`mastered = true` → 不再推送
+  - 同时写一条 `review` 事件日志；请求携带 `countDraw: true` 时额外写一条 `draw` 日志（即一次完整回想）
+- 手动档位：等级 1-4 调整时将 `drawCount` 重置为该档位等效出现次数（恢复自动调节）；等级 0 即 `mastered=true`，手动锁定不参与自动调整。
+
+### 4.4 QuizLog（回想事件日志）
+
+```ts
+{
+  _id: string;
+  userId: string;          // 索引 (userId, createdAt -1)、(userId, action, questionId)
+  questionId: string;
+  action: 'draw' | 'review';   // draw=完整回想（对照回忆自评时记录）; review=自评反馈
+  feedback?: 'known' | 'fuzzy' | 'forgot' | 'mastered';  // 仅 review 有值
+  createdAt: Date;
+}
+```
+
+- 用途：回想热力图、累计回想、连续打卡、薄弱标签、自评反馈分布等学习统计的数据源。
+- 计数口径：抽题本身不写日志；点击对照回忆自评选项才算一次完整回想（写 `draw` 日志），同一题反复调整反馈不重复计数。
+
+### 4.5 图片（GridFS）
+
+- 存储于 MongoDB GridFS `images` 桶（255KB 分块，无 16MB 文档上限约束）。
+- Markdown 中以内联引用保存：`/api/images/<ObjectId>`；标题与正文均支持。
+- 上传限制：登录用户、`image/*`、单张 ≤ 10MB；读取公开访问、强缓存一年。
+- 暂无孤儿回收机制（规划中：以「标题+正文引用扫描」为标准的定期 GC）。
 
 ## 5. 权限设计
 
@@ -273,7 +329,50 @@ flowchart LR
 - 硬删除。
 - 仅可删除有权限的题目。
 
-### 6.4 AI
+#### GET /api/questions/random
+
+每日回想抽题。
+
+- 未登录：仅公开题目，不记录回想状态。
+- 登录：公开 + 自己的私有（admin 全部），排除 `mastered`，按 `levelWeight(autoLevelByDrawCount(drawCount))` 加权轮盘随机。
+- 响应携带题目详情 + 当前 `drawCount`/`mastered` 状态。
+- 抽题本身不计数、不写日志。
+
+#### POST /api/questions/:id/quiz-feedback
+
+对照回忆自评反馈（仅登录）。
+
+请求：
+
+```json
+{ "feedback": "known | fuzzy | forgot | mastered", "countDraw": true }
+```
+
+- 按 4.3 权重算法调整 QuizState（`forgot` 清零、`fuzzy` +1、`known` +2、`mastered` 标记）。
+- 写 `review` 日志；`countDraw=true` 时额外写 `draw` 日志（一次完整回想），同一题重复调整由前端保证只计一次。
+- 返回更新后的 `drawCount`/`mastered`。
+
+### 6.4 Dashboard（数据看板）
+
+#### GET /api/users/me/dashboard
+
+- 仅登录可用，聚合当前用户学习统计。
+- 返回：今日回想/累计回想/连续打卡/完全掌握计数、回想热力图（近一年按日 `draw` 计数）、近 7 天趋势、推送频率分布、薄弱标签 Top 5（`(forgot + 0.5 × fuzzy) / total`，反馈 ≥ 2 次）、自评反馈分布、我的笔记统计（总数/难度分布/高频标签 Top 6/最近回想）。
+- 注意：聚合管道中 `creatorId` 匹配必须使用 ObjectId（集合存储类型），字符串匹配会导致统计为空。
+
+### 6.5 Images（图片上传）
+
+#### POST /api/images
+
+- 仅登录；JSON base64（`filename` + `data`），`image/*`、≤ 10MB。
+- 存入 GridFS `images` 桶，返回 `{ id, url }`，`url` 形如 `/api/images/<ObjectId>`。
+
+#### GET /api/images/:id
+
+- 公开访问（`<img>` 标签无法携带 Authorization 头）；流式返回，`Cache-Control: public, max-age=31536000, immutable`。
+- 404：ObjectId 非法或文件不存在。
+
+### 6.6 AI
 
 #### POST /api/ai/analyze
 
@@ -297,7 +396,7 @@ flowchart LR
 }
 ```
 
-### 6.5 Import/Export
+### 6.7 Import/Export
 
 #### GET /api/questions/export
 
@@ -419,8 +518,7 @@ flowchart LR
 
 - MONGO_URI
 - JWT_SECRET
-- DEEPSEEK_API_KEY
-- DEEPSEEK_BASE_URL
+- COZE_API_TOKEN / COZE_BOT_ID / COZE_API_BASE（AI 分析，可选）
 - ADMIN_SEED_USERNAME
 - ADMIN_SEED_PASSWORD
 - WECHAT_APPID（可选，小程序微信登录）
