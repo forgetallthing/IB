@@ -126,6 +126,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
   // 随机抽题：与列表接口相同的可见性基线；excludeId 供"再来一篇"避开当前题。
   // 权重规则：登录用户按 出现次数 自动降权（次数越多权重越低、没出现过的优先），
   // 自评反馈直接调整出现次数；「完全掌握」通过自评设置，不再推送。
+  // 注意：抽题本身不计数；点击对照回忆自评选项才算一次完整回想（quiz-feedback 中记录回想日志，反馈本身继续调整出现次数）。
   app.get('/api/questions/random', async (request, reply) => {
     let me: { sub?: string; role?: string } | null = null;
     try {
@@ -246,16 +247,6 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     const item = await QuestionModel.findById(picked.id).lean();
     if (!item) return reply.status(404).send({ message: '暂无可回想的内容' });
 
-    // 抽中计数：出现次数 +1，并记录回想日志供统计使用
-    if (me) {
-      await QuizStateModel.updateOne(
-        { userId: new Types.ObjectId(me.sub), questionId: picked.id },
-        { $inc: { drawCount: 1 }, $set: { lastDrawAt: new Date() } },
-        { upsert: true },
-      );
-      await QuizLogModel.create({ userId: me.sub, questionId: picked.id, action: 'draw' });
-    }
-
     return {
       id: String(item._id),
       title: item.title,
@@ -269,7 +260,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     };
   });
 
-  // 回想自评反馈：直接调整推送权重——没记住清零回优先推荐、模糊+1、记住了+2、完全掌握不再推送
+  // 回想自评反馈：直接调整推送权重——没记住清零回优先推荐、模糊+1、记住了+2、完全掌握不再推送。
+  // countDraw：本次回想是否计入回想日志（前端保证每篇抽到的笔记只在首次反馈时传 true）
   app.post('/api/questions/:id/quiz-feedback', async (request, reply) => {
     try {
       await request.jwtVerify();
@@ -278,7 +270,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     }
 
     const params = request.params as { id: string };
-    const body = request.body as { feedback?: string };
+    const body = request.body as { feedback?: string; countDraw?: boolean };
     const feedback = body.feedback;
     if (feedback !== 'known' && feedback !== 'fuzzy' && feedback !== 'forgot' && feedback !== 'mastered') {
       return reply.status(400).send({ message: '反馈类型不合法' });
@@ -308,6 +300,10 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
 
     const newState = await QuizStateModel.findOneAndUpdate(filter, update, { upsert: true, new: true }).lean();
     await QuizLogModel.create({ userId: userIdObj, questionId: params.id, action: 'review', feedback });
+    // 点击对照回忆选项才算一次完整回想：记录回想日志供热力图/累计回想/连续打卡统计使用
+    if (body.countDraw === true) {
+      await QuizLogModel.create({ userId: userIdObj, questionId: params.id, action: 'draw' });
+    }
 
     return {
       drawCount: newState?.drawCount ?? 0,

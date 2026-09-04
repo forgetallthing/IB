@@ -120,14 +120,19 @@ const FEEDBACK_NOTICES: Record<string, string> = {
   mastered: '已标记为完全掌握，之后不再推送这篇',
 };
 
+// 点击对照回忆选项才算一次完整回想：每篇抽到的笔记只在首次反馈时计一次回想日志，重复调整反馈不重复计
+let recallCounted = false;
+
 async function submitFeedback(feedback: 'known' | 'fuzzy' | 'forgot' | 'mastered') {
   if (!question.value || feedbackSaving.value) return;
   feedbackSaving.value = true;
+  const countDraw = !!auth.user && !recallCounted;
   try {
     const result = await request<{ drawCount: number; mastered: boolean }>(
       `/questions/${question.value.id}/quiz-feedback`,
-      { method: 'POST', body: JSON.stringify({ feedback }) },
+      { method: 'POST', body: JSON.stringify({ feedback, countDraw }) },
     );
+    recallCounted = true;
     question.value = { ...question.value, drawCount: result.drawCount, mastered: result.mastered };
     notice(FEEDBACK_NOTICES[feedback]);
   } catch (error) {
@@ -189,6 +194,7 @@ async function drawQuestion(excludeId?: string) {
     const qs = params.toString();
     const item = await request<QuizQuestion>(`/questions/random${qs ? `?${qs}` : ''}`);
     question.value = item;
+    recallCounted = false;
     showAnswer.value = false;
     showAiPanel.value = false;
     aiAnalysis.value = '';
@@ -222,6 +228,11 @@ async function runAiReview() {
 
 function nextQuestion() {
   drawQuestion(question.value?.id);
+}
+
+// 显示/隐藏参考详情（纯切换，不产生任何计数）
+function toggleAnswer() {
+  showAnswer.value = !showAnswer.value;
 }
 
 // 首次抽到题目后初始化作答编辑器；换题时清空作答
@@ -277,7 +288,7 @@ onBeforeUnmount(() => {
         <button type="button" class="secondary" :disabled="analyzing || !question" @click="runAiReview">
           {{ analyzing ? 'AI 分析中…' : 'AI 分析' }}
         </button>
-        <button type="button" class="secondary" :disabled="!question" @click="showAnswer = !showAnswer">
+        <button type="button" class="secondary" :disabled="!question" @click="toggleAnswer">
           {{ showAnswer ? '隐藏详情' : '显示详情' }}
         </button>
         <button type="button" :disabled="loading" @click="nextQuestion">再来一篇</button>
@@ -491,6 +502,36 @@ onBeforeUnmount(() => {
   padding: 12px 16px !important;
 }
 
+/* 手机：详情面板按内容长度完整展开，禁止面板内部滚动，由整个网格纵向滚动；
+   我的作答保持固定视口高度（44dvh），不随面板数量被挤压 */
+@media (max-width: 899px) {
+  .quiz-grid {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  /* 详情面板不收缩、不内部滚动，完整展开到内容高度 */
+  .quiz-grid .ai-side,
+  .quiz-grid .answer-side {
+    flex: none;
+    height: auto;
+    overflow-y: visible;
+  }
+
+  .quiz-grid .input-side {
+    flex: none;
+    height: 44dvh;
+    min-height: 240px;
+  }
+
+  /* 反馈按钮缩小尺寸，保证手机上一行排得下四个 */
+  .fb-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
 /* PC / Pad：左侧作答占满全高，右侧按需放 AI 分析 / 参考答案 */
 @media (min-width: 900px) {
   /* 行数显式声明，grid-row: 1 / -1 才能正确跨到最后一行 */
@@ -573,7 +614,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 10px 4px 2px;
   margin-top: 8px;
   background: var(--surface);
@@ -587,7 +629,9 @@ onBeforeUnmount(() => {
 
 .feedback-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-left: auto;
 }
 
 .fb-btn {
@@ -597,6 +641,8 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 

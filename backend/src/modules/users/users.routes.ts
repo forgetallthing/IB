@@ -205,11 +205,24 @@ export async function registerUserRoutes(app: FastifyInstance) {
     const todayKey = new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const todayStartUtcMs = Date.parse(`${todayKey}T00:00:00+08:00`);
 
-    const [noteTotal, publicCount, privateCount, todayReviews, recentLogs] = await Promise.all([
+    const [noteTotal, publicCount, privateCount, todayReviews, difficultyRows, tagRows, recentLogs] = await Promise.all([
       QuestionModel.countDocuments({ creatorId }),
       QuestionModel.countDocuments({ creatorId, visibility: 'public' }),
       QuestionModel.countDocuments({ creatorId, visibility: 'private' }),
       QuizLogModel.countDocuments({ userId: userIdObj, action: 'review', createdAt: { $gte: new Date(todayStartUtcMs) } }),
+      // 我的笔记难度分布（aggregate 不会自动做类型转换，必须用 ObjectId 匹配）
+      QuestionModel.aggregate<{ _id: string | null; count: number }>([
+        { $match: { creatorId: userIdObj } },
+        { $group: { _id: '$difficulty', count: { $sum: 1 } } },
+      ]),
+      // 我最常写的标签 Top 6
+      QuestionModel.aggregate<{ _id: string; count: number }>([
+        { $match: { creatorId: userIdObj } },
+        { $unwind: '$tags' },
+        { $group: { _id: '$tags', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 6 },
+      ]),
       QuizLogModel.aggregate<{
         _id: unknown;
         questionId: unknown;
@@ -238,6 +251,12 @@ export async function registerUserRoutes(app: FastifyInstance) {
       publicCount,
       privateCount,
       todayReviews,
+      difficultyDist: {
+        easy: difficultyRows.find((row) => row._id === 'easy')?.count ?? 0,
+        medium: difficultyRows.find((row) => row._id === 'medium')?.count ?? 0,
+        hard: difficultyRows.find((row) => row._id === 'hard')?.count ?? 0,
+      },
+      topTags: tagRows.map((row) => ({ tag: row._id, count: row.count })),
       recent: recentLogs
         .filter((log) => typeof log.title === 'string')
         .map((log) => ({
@@ -262,10 +281,10 @@ export async function registerUserRoutes(app: FastifyInstance) {
     const userIdObj = new Types.ObjectId(me.sub);
     const fmtDate = (d: Date) => new Date(d.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    const since = new Date(Date.now() - 105 * 24 * 60 * 60 * 1000);
+    const since = new Date(Date.now() - 366 * 24 * 60 * 60 * 1000);
 
     const [calendar, feedbacks, weakRows, states, visibleCount] = await Promise.all([
-      // 打卡热力图：最近 105 天每天的回想（抽中）次数
+      // 打卡热力图：最近 365 天每天的回想（点击「显示详情」）次数
       QuizLogModel.aggregate<{ date: string; count: number }>([
         { $match: { userId: userIdObj, action: 'draw', createdAt: { $gte: since } } },
         {
@@ -343,6 +362,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
       knownCount: feedbackOf('known'),
       fuzzyCount: feedbackOf('fuzzy'),
       forgotCount: feedbackOf('forgot'),
+      masteredCount: feedbackOf('mastered'),
       streak,
       calendar,
       levelDist,
