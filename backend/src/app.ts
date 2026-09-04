@@ -8,9 +8,10 @@ import { registerQuestionRoutes } from './modules/questions/questions.routes.js'
 import { registerAiRoutes } from './modules/ai/ai.routes.js';
 import { registerImportExportRoutes } from './modules/import-export/importExport.routes.js';
 import { registerTagRoutes } from './modules/tags/tags.routes.js';
+import { registerImageRoutes } from './modules/images/images.routes.js';
 
 export async function createApp() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, bodyLimit: 25 * 1024 * 1024 });
 
   await app.register(cors, {
     origin: true,
@@ -34,6 +35,7 @@ export async function createApp() {
   await registerAiRoutes(app);
   await registerImportExportRoutes(app);
   await registerTagRoutes(app);
+  await registerImageRoutes(app);
 
   return app;
 }

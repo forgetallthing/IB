@@ -116,4 +116,9 @@ onMounted(loadDetail);
   margin-top: 8px;
   line-height: 1.8;
 }
+
+.content :deep(img) {
+  max-width: 100%;
+  border-radius: 8px;
+}
 </style>

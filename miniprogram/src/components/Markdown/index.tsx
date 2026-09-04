@@ -1,12 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RichText, View, Text } from '@tarojs/components';
 import { markdownToSegments, highlightCode, type CodeToken } from '../../utils/markdown';
+import { API_BASE } from '../../config';
 import styles from './index.module.scss';
 // towxml 转换入口（原生库，类型见 src/types/towxml.d.ts）
 // @ts-ignore
 import towxml from '../towxml/index';
 
 const isWeapp = process.env.TARO_ENV === 'weapp';
+
+/**
+ * 把 Markdown 里的站内相对路径（如 /api/images/xxx）补全为绝对地址。
+ * 小程序没有"当前域名"概念，<image> 无法加载相对路径，必须显式拼上 API_BASE。
+ */
+function absolutizeAssets(source: string): string {
+  if (!source.includes('](/api/') && !source.includes('src="/api/')) return source;
+  return source
+    .replace(/\]\((\/api\/[^)\s]+)\)/g, `](${API_BASE}$1)`)
+    .replace(/src="(\/api\/[^"]+)"/g, `src="${API_BASE}$1"`);
+}
 
 /** 解析结果缓存：同内容只解析一次，收起再展开直接复用（LRU 上限，防内存增长） */
 const parsedCache = new Map<string, any>();
@@ -51,19 +63,20 @@ const CodeBlock: React.FC<{ lang: string; code: string }> = ({ lang, code }) => 
  * - H5 预览：towxml 原生组件不可用，走自研轻量渲染
  */
 const Markdown: React.FC<MarkdownProps> = ({ source, defer = 60 }) => {
-  const segments = useMemo(() => markdownToSegments(source), [source]);
+  const normalized = useMemo(() => absolutizeAssets(source), [source]);
+  const segments = useMemo(() => markdownToSegments(normalized), [normalized]);
   const [nodes, setNodes] = useState<any>(null);
 
   useEffect(() => {
-    if (!isWeapp || !source) {
+    if (!isWeapp || !normalized) {
       setNodes(null);
       return;
     }
     // 缓存命中：直接复用，零解析开销
-    const cached = parsedCache.get(source);
+    const cached = parsedCache.get(normalized);
     if (cached) {
-      parsedCache.delete(source);
-      parsedCache.set(source, cached);
+      parsedCache.delete(normalized);
+      parsedCache.set(normalized, cached);
       setNodes(cached);
       return;
     }
@@ -71,8 +84,8 @@ const Markdown: React.FC<MarkdownProps> = ({ source, defer = 60 }) => {
     setNodes(null);
     const timer = setTimeout(() => {
       try {
-        const result = towxml(source, 'markdown', { theme: 'light' });
-        parsedCache.set(source, result);
+        const result = towxml(normalized, 'markdown', { theme: 'light' });
+        parsedCache.set(normalized, result);
         if (parsedCache.size > PARSE_CACHE_LIMIT) {
           const oldestKey = parsedCache.keys().next().value;
           if (oldestKey !== undefined) parsedCache.delete(oldestKey);
@@ -83,7 +96,7 @@ const Markdown: React.FC<MarkdownProps> = ({ source, defer = 60 }) => {
       }
     }, defer);
     return () => clearTimeout(timer);
-  }, [source, defer]);
+  }, [normalized, defer]);
 
   if (!source) return null;
 

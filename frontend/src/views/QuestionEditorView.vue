@@ -136,6 +136,22 @@ function initContentEditor() {
     cdn: '/vditor',
     link: { isOpen: true },
     value: form.content,
+    upload: {
+      multiple: false,
+      accept: 'image/*',
+      max: 10 * 1024 * 1024,
+      handler: async (files: File[]) => {
+        const file = files[0];
+        if (!file) return null;
+        try {
+          const url = await uploadImage(file);
+          contentVditor?.insertValue(`![${file.name}](${url})\n`);
+        } catch (error) {
+          fail(error instanceof Error ? error.message : '图片上传失败');
+        }
+        return null;
+      },
+    },
     input: (value) => {
       form.content = value;
     },
@@ -147,6 +163,32 @@ function initContentEditor() {
       }
     },
   });
+}
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(new Error('读取图片失败'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImage(file: File): Promise<string> {
+  const data = await readAsBase64(file);
+  const result = await request<{ id: string; url: string }>('/images', {
+    method: 'POST',
+    body: JSON.stringify({
+      data,
+      filename: file.name,
+      contentType: file.type || 'image/png',
+    }),
+  });
+  return result.url;
 }
 
 async function loadTags() {
