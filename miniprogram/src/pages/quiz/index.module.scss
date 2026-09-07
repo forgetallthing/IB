@@ -1,0 +1,333 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  // 注意：tabBar 页面的 100vh 含 tabBar 区域（约 83px），禁止用作 min-height/height
+  padding: $spacing-md $page-padding calc(#{$spacing-xl} + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+// 内容区
+.body {
+  display: flex;
+  flex-direction: column;
+}
+
+// ========== 操作行（紧凑胶囊按钮） ==========
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.actionBtn {
+  @include button-reset;
+  height: 60rpx;
+  min-width: 96rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-round;
+  background-color: $color-bg-card;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  font-size: $font-size-sm;
+  color: $color-primary-dark;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.actionBtnPrimary {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  border: none;
+  color: $color-text-white;
+}
+
+// 筛选按钮激活态：teal 底加重提示当前有筛选条件（与 Web 端一致）
+.actionBtnActive {
+  background-color: rgba(13, 148, 136, 0.12);
+  border-color: $color-primary-dark;
+  font-weight: $font-weight-semibold;
+}
+
+// ========== 加载 / 空态 ==========
+.loadingWrap {
+  padding: 120rpx 0;
+  display: flex;
+  justify-content: center;
+}
+
+.loadingText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+// ========== 卡片 ==========
+.card {
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.questionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+}
+
+.meta {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+// ========== 面板通用 ==========
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.panelLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+}
+
+.clearBtn {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  padding: 4rpx 8rpx;
+}
+
+.mdContent {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  word-break: break-word;
+}
+
+.aiPlaceholder {
+  margin-top: $spacing-sm;
+  padding: 32rpx $spacing-lg;
+  border: 1px dashed $color-border;
+  border-radius: $radius-md;
+  background-color: $color-bg-tag;
+  display: flex;
+  justify-content: center;
+}
+
+.aiPlaceholderText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-align: center;
+}
+
+// ========== 参考详情：自评反馈条 ==========
+.feedbackBar {
+  margin-top: $spacing-md;
+  padding-top: $spacing-sm;
+  border-top: 1px solid $color-divider;
+}
+
+.feedbackHint {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-sm;
+}
+
+.feedbackActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.fbBtn {
+  @include button-reset;
+  height: 56rpx;
+  padding: 0 22rpx;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all $transition-fast;
+}
+
+// 自定义 hover：降低透明度（项目约定，不用全局 teal 实心反馈）
+.fbHover {
+  opacity: 0.2;
+}
+
+.fbForgot {
+  color: #c24545;
+  background-color: rgba(217, 95, 95, 0.1);
+}
+
+.fbFuzzy {
+  color: #b45309;
+  background-color: rgba(180, 83, 9, 0.1);
+}
+
+.fbKnown {
+  color: $color-primary-dark;
+  background-color: rgba(13, 148, 136, 0.12);
+}
+
+.fbMastered {
+  color: #64748b;
+  background-color: rgba(100, 116, 139, 0.12);
+}
+
+.guestHint {
+  display: block;
+  margin-top: $spacing-md;
+  padding-top: $spacing-sm;
+  border-top: 1px solid $color-divider;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+// ========== 我的作答 ==========
+// 卡片不做 flex 自适应伸展，高度完全由内容决定
+.answerCard {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+// 输入框包裹层：固定高度（避开 vh 在 tabBar 页面的口径差异）
+.answerField {
+  height: 680rpx;
+}
+
+// 输入框填满包裹层（min-height 兜底百分比失效场景）
+.answerInput {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 280rpx;
+  box-sizing: border-box;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background-color: $color-bg-tag;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+}
+
+.editHint {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+// ========== 筛选弹层（底部弹层） ==========
+.mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  background-color: rgba(15, 30, 40, 0.4);
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  box-sizing: border-box;
+  padding: $spacing-lg $page-padding calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+  background-color: $color-bg-card;
+  border-radius: $radius-xl $radius-xl 0 0;
+  box-shadow: $shadow-popup;
+}
+
+.sheetTitle {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.sheetHint {
+  display: block;
+  margin-top: $spacing-xs;
+  margin-bottom: $spacing-md;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.filterBlock {
+  margin-bottom: $spacing-md;
+}
+
+.filterLabel {
+  display: block;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.filterEmpty {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.option {
+  @include button-reset;
+  height: 56rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-round;
+  background-color: $color-bg-tag;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  transition: all $transition-fast;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.optionActive {
+  background-color: rgba(13, 148, 136, 0.12);
+  color: $color-primary-dark;
+  font-weight: $font-weight-semibold;
+}
+
+.sheetActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-lg;
+}
+
+.sheetSpacer {
+  flex: 1;
+}
+
+.actionBtnGhost {
+  background-color: rgba(13, 148, 136, 0.08);
+  color: $color-primary-dark;
+}

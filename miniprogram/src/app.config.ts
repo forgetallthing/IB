@@ -5,6 +5,7 @@ export default defineAppConfig({
     'pages/mine/index',
     'pages/login/index',
     'pages/editor/index',
+    'pages/quiz/index',
     'pages/settings/index',
     'pages/users/index',
     'pages/tags-manage/index',
@@ -36,6 +37,12 @@ export default defineAppConfig({
         text: '新建',
         iconPath: 'assets/tabbar/create.png',
         selectedIconPath: 'assets/tabbar/create-selected.png',
+      },
+      {
+        pagePath: 'pages/quiz/index',
+        text: '回想',
+        iconPath: 'assets/tabbar/quiz.png',
+        selectedIconPath: 'assets/tabbar/quiz-selected.png',
       },
       {
         pagePath: 'pages/mine/index',

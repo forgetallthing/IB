@@ -8,6 +8,8 @@ import type {
   Question,
   QuestionDraft,
   QuestionPage,
+  QuizFeedback,
+  QuizQuestion,
   Tag,
   User,
   UserWithTime,
@@ -166,7 +168,51 @@ export function updateUser(id: string, patch: { username?: string; role?: 'admin
   return request<UserWithTime>('update-user', 'PATCH', `/api/users/${id}`, patch);
 }
 
+// ========== Quiz（每日回想） ==========
+export interface QuizRandomQuery {
+  /** 「再来一篇」时排除当前笔记 */
+  excludeId?: string;
+  /** 难度筛选（任一匹配） */
+  difficulty?: string[];
+  /** 标签筛选（传标签名，任一匹配） */
+  tags?: string[];
+}
+
+/** 加权随机抽题：登录用户按出现次数降权，完全掌握不进入候选 */
+export function getRandomQuestion(query: QuizRandomQuery) {
+  const qs = buildQuery({
+    excludeId: query.excludeId,
+    difficulty: query.difficulty,
+    tags: query.tags,
+  });
+  return request<QuizQuestion>('quiz-random', 'GET', `/api/questions/random${qs}`);
+}
+
+/** 回想自评反馈：countDraw 为 true 时记一次完整回想日志（每篇仅首次反馈传 true） */
+export function postQuizFeedback(id: string, payload: { feedback: QuizFeedback; countDraw: boolean }) {
+  return request<{ drawCount: number; mastered: boolean }>(
+    'quiz-feedback',
+    'POST',
+    `/api/questions/${id}/quiz-feedback`,
+    payload,
+  );
+}
+
+/** 每日回想筛选偏好（登录用户持久化到后台） */
+export function getQuizPrefs() {
+  return request<{ difficulty: string[]; tags: string[] }>('quiz-prefs', 'GET', '/api/users/me/quiz-prefs');
+}
+
+export function putQuizPrefs(payload: { difficulty: string[]; tags: string[] }) {
+  return request<{ difficulty: string[]; tags: string[] }>('quiz-prefs', 'PUT', '/api/users/me/quiz-prefs', payload);
+}
+
 // ========== AI ==========
 export function analyzeAi(payload: { title: string; content: string }) {
   return request<AiSuggestion>('analyze-ai', 'POST', '/api/ai/analyze', payload);
+}
+
+/** AI 分析：把题目与用户作答发给 Coze 智能体做点评（Markdown 结果） */
+export function aiReview(payload: { title: string; answer: string }) {
+  return request<{ analysis: string }>('ai-review', 'POST', '/api/ai/review', payload);
 }
