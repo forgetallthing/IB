@@ -39,59 +39,69 @@ async function issueLogin(user: { _id: unknown; role: string; username: string }
 }
 
 export async function registerAuthRoutes(app: FastifyInstance) {
-  app.post('/api/auth/login', async (request, reply) => {
-    const body = request.body as { username?: string; password?: string };
-    if (!body.username || !body.password) {
-      return reply.status(400).send({ message: '请输入用户名和密码' });
-    }
+  // 登录限流：单 IP 每分钟 5 次，防密码暴力破解
+  app.post(
+    '/api/auth/login',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const body = request.body as { username?: string; password?: string };
+      if (!body.username || !body.password) {
+        return reply.status(400).send({ message: '请输入用户名和密码' });
+      }
 
-    const user = await UserModel.findOne({ username: body.username, status: 'active' }).exec();
-    if (!user || !verifyPassword(body.password, user.passwordHash)) {
-      return reply.status(401).send({ message: '用户名或密码错误' });
-    }
+      const user = await UserModel.findOne({ username: body.username, status: 'active' }).exec();
+      if (!user || !verifyPassword(body.password, user.passwordHash)) {
+        return reply.status(401).send({ message: '用户名或密码错误' });
+      }
 
-    // 旧的无盐 SHA-256 哈希在登录成功后透明升级为 scrypt
-    if (isLegacyHash(user.passwordHash)) {
-      user.passwordHash = hashPassword(body.password);
-      await user.save();
-    }
+      // 旧的无盐 SHA-256 哈希在登录成功后透明升级为 scrypt
+      if (isLegacyHash(user.passwordHash)) {
+        user.passwordHash = hashPassword(body.password);
+        await user.save();
+      }
 
-    return issueLogin(user, reply);
-  });
+      return issueLogin(user, reply);
+    },
+  );
 
   /**
    * 微信小程序登录：仅已绑定微信的账号可登录。
    * 未绑定的微信不自动注册，需先用账号密码登录，再到设置页绑定微信。
    */
-  app.post('/api/auth/wechat-login', async (request, reply) => {
-    const body = request.body as { code?: string };
-    if (!body.code) {
-      return reply.status(400).send({ message: '微信登录失败，请重试' });
-    }
-    if (!appConfig.wechatAppId || !appConfig.wechatSecret) {
-      return reply.status(501).send({ message: '微信登录未配置，请使用账号密码登录' });
-    }
+  app.post(
+    '/api/auth/wechat-login',
+    // 微信登录会触发外部 code2session 请求，同样限流（单 IP 每分钟 10 次）
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const body = request.body as { code?: string };
+      if (!body.code) {
+        return reply.status(400).send({ message: '微信登录失败，请重试' });
+      }
+      if (!appConfig.wechatAppId || !appConfig.wechatSecret) {
+        return reply.status(501).send({ message: '微信登录未配置，请使用账号密码登录' });
+      }
 
-    let session: WechatSessionResponse;
-    try {
-      session = await codeToSession(body.code);
-    } catch (error) {
-      console.error('[Auth] code2session 请求失败:', error);
-      return reply.status(502).send({ message: '微信服务暂不可用，请稍后重试' });
-    }
+      let session: WechatSessionResponse;
+      try {
+        session = await codeToSession(body.code);
+      } catch (error) {
+        console.error('[Auth] code2session 请求失败:', error);
+        return reply.status(502).send({ message: '微信服务暂不可用，请稍后重试' });
+      }
 
-    if (!session.openid) {
-      console.error('[Auth] code2session 返回错误:', session.errcode, session.errmsg);
-      return reply.status(401).send({ message: '微信登录失败，请重试' });
-    }
+      if (!session.openid) {
+        console.error('[Auth] code2session 返回错误:', session.errcode, session.errmsg);
+        return reply.status(401).send({ message: '微信登录失败，请重试' });
+      }
 
-    const bound = await UserModel.findOne({ openId: session.openid, status: 'active' }).exec();
-    if (!bound) {
-      return reply.status(403).send({ message: '该微信未绑定账号，请使用账号密码登录，并在设置页绑定微信' });
-    }
+      const bound = await UserModel.findOne({ openId: session.openid, status: 'active' }).exec();
+      if (!bound) {
+        return reply.status(403).send({ message: '该微信未绑定账号，请使用账号密码登录，并在设置页绑定微信' });
+      }
 
-    return issueLogin(bound, reply);
-  });
+      return issueLogin(bound, reply);
+    },
+  );
 
   /**
    * 绑定微信：把当前登录账号与微信 openid 关联，之后可在小程序直接微信登录。
