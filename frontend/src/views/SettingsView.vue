@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { request } from '../api';
+import { request, requestBlob } from '../api';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
@@ -39,8 +39,7 @@ const loading = ref(false);
 const { notice, fail } = useToast();
 const users = ref<UserItem[]>([]);
 const tags = ref<TagItem[]>([]);
-const exportText = ref('');
-const importText = ref('');
+const exporting = ref(false);
 
 const userForm = reactive({ username: '', email: '', password: '', role: 'member' as 'admin' | 'member' });
 const tagForm = reactive({ name: '', color: '#e3eef3', description: '', displayOrder: 0 });
@@ -120,7 +119,7 @@ async function refresh() {
   try {
     const tasks: Promise<void>[] = [loadProfile()];
     if (isAdmin.value) {
-      tasks.push(loadUsers(), loadTags(), loadExport());
+      tasks.push(loadUsers(), loadTags());
     }
     await Promise.all(tasks);
   } catch (error) {
@@ -130,32 +129,25 @@ async function refresh() {
   }
 }
 
-async function loadExport() {
+// 整库备份下载：后端调用 mongodump 生成 .archive.gz 归档
+async function downloadBackup() {
+  if (exporting.value) return;
+  exporting.value = true;
   try {
-    const result = await request<{ format: string; items: unknown[] }>('/questions/export');
-    exportText.value = JSON.stringify(result, null, 2);
+    const blob = await requestBlob('/backup/export');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[-T:]/g, '');
+    a.href = url;
+    a.download = `interview_bank_backup_${stamp}.archive.gz`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notice(`备份已导出（${(blob.size / 1024).toFixed(0)} KB）`);
   } catch (error) {
-    fail(error instanceof Error ? error.message : '导出加载失败');
+    fail(error instanceof Error ? error.message : '备份导出失败');
+  } finally {
+    exporting.value = false;
   }
-}
-
-async function doImport() {
-  try {
-    const parsed = JSON.parse(importText.value || '{}') as { items?: unknown[] };
-    const result = await request<{ ok: boolean; importedIds: string[] }>('/questions/import', {
-      method: 'POST',
-      body: JSON.stringify({ items: parsed.items ?? [] }),
-    });
-    notice(`导入成功，写入 ${result.importedIds.length} 条`);
-    await loadExport();
-  } catch (error) {
-    fail(error instanceof Error ? error.message : '导入失败');
-  }
-}
-
-async function copyExport() {
-  await navigator.clipboard.writeText(exportText.value || '');
-  notice('已复制导出 JSON');
 }
 
 async function createUser() {
@@ -365,7 +357,7 @@ onMounted(refresh);
       <template v-if="isAdmin">
         <button class="secondary" :class="{ active: tab === 'users' }" @click="tab = 'users'">用户管理</button>
         <button class="secondary" :class="{ active: tab === 'tags' }" @click="tab = 'tags'">标签管理</button>
-        <button class="secondary" :class="{ active: tab === 'io' }" @click="tab = 'io'">导入导出</button>
+        <button class="secondary" :class="{ active: tab === 'io' }" @click="tab = 'io'">数据备份</button>
       </template>
     </div>
 
@@ -484,16 +476,10 @@ onMounted(refresh);
 
     <article v-else-if="tab === 'io'" class="panel">
       <div class="panel-head">
-        <h2>导出内容</h2>
-        <button class="secondary" type="button" @click="copyExport">复制</button>
+        <h2>整库备份</h2>
+        <button type="button" :disabled="exporting" @click="downloadBackup">{{ exporting ? '导出中…' : '导出备份文件' }}</button>
       </div>
-      <textarea v-model="exportText" rows="14" readonly></textarea>
-
-      <div class="panel-head">
-        <h2>导入内容</h2>
-        <button type="button" @click="doImport">开始导入</button>
-      </div>
-      <textarea v-model="importText" rows="14" placeholder='粘贴 {"items": [...] }'></textarea>
+      <p class="backup-hint">导出整个 MongoDB 数据库（mongodump 归档格式 .archive.gz，含笔记、用户、标签与图片），可用 mongorestore 恢复。</p>
     </article>
 
     <div v-if="editingUser" class="modal-overlay" @click.self="closeUserEdit">
@@ -682,6 +668,12 @@ h2 + .list {
 
 .drag-hint {
   margin: -6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.backup-hint {
+  margin: 0;
   font-size: 13px;
   color: var(--muted);
 }

@@ -80,41 +80,27 @@ describe('questions CRUD', () => {
     expect(getRes.json().title).toBe('更新标题');
   }, 60000);
 
-  it('export notes', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/questions/export' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().format).toBe('json');
-    expect(Array.isArray(res.json().items)).toBe(true);
+  it('backup requires admin', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/backup/export' });
+    expect(res.statusCode).toBe(401);
   }, 60000);
+
+  it('backup export returns mongodump archive', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/backup/export',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('octet-stream');
+    expect(res.headers['content-disposition']).toContain('archive.gz');
+    expect(res.rawPayload.length).toBeGreaterThan(0);
+  }, 120000);
 
   it('filter notes by creator name', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/questions?creatorName=admin' });
     expect(res.statusCode).toBe(200);
     expect(res.json().items.length).toBeGreaterThan(0);
-  }, 60000);
-
-  it('import notes', async () => {
-    const res = await app.inject({
-      method: 'POST',
-      url: '/api/questions/import',
-      headers: { authorization: `Bearer ${token}` },
-      payload: {
-        items: [
-          {
-            title: '导入笔记',
-            content: '导入内容',
-            answer: '导入详情',
-            tags: ['import'],
-            difficulty: 'medium',
-            creatorName: 'admin',
-            visibility: 'public',
-          },
-        ],
-      },
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.json().importedIds.length).toBe(1);
   }, 60000);
 
   it('delete note', async () => {

@@ -31,3 +31,25 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 
   return payload as T;
 }
+
+// 二进制下载（如整库备份文件）：失败时仍尝试解析 JSON 错误信息
+export async function requestBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('ib_token') : null;
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const response = await fetch(`${apiBaseUrl}${path}`, { headers });
+  if (!response.ok) {
+    let message = '请求失败';
+    try {
+      const payload = await response.json();
+      if (payload && typeof payload === 'object' && 'message' in payload) {
+        message = String((payload as { message?: unknown }).message ?? message);
+      }
+    } catch {
+      // 非 JSON 错误体，使用默认提示
+    }
+    throw new Error(message);
+  }
+  return response.blob();
+}

@@ -7,7 +7,7 @@ import { registerAuthRoutes } from './modules/auth/auth.routes.js';
 import { registerUserRoutes } from './modules/users/users.routes.js';
 import { registerQuestionRoutes } from './modules/questions/questions.routes.js';
 import { registerAiRoutes } from './modules/ai/ai.routes.js';
-import { registerImportExportRoutes } from './modules/import-export/importExport.routes.js';
+import { registerBackupRoutes } from './modules/backup/backup.routes.js';
 import { registerTagRoutes } from './modules/tags/tags.routes.js';
 import { registerImageRoutes } from './modules/images/images.routes.js';
 
@@ -48,7 +48,7 @@ export async function createApp() {
   await registerUserRoutes(app);
   await registerQuestionRoutes(app);
   await registerAiRoutes(app);
-  await registerImportExportRoutes(app);
+  await registerBackupRoutes(app);
   await registerTagRoutes(app);
   await registerImageRoutes(app);
 

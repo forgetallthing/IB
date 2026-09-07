@@ -12,7 +12,8 @@ COPY . .
 RUN npm run build
 
 # ---------- 阶段 2：后端（pm2-runtime 托管） ----------
-FROM node:20-alpine AS backend
+# 用 debian-slim 而非 alpine：glibc 兼容 mongo:7 里的 mongodump 二进制（整库备份功能依赖）
+FROM node:20-slim AS backend
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -20,6 +21,9 @@ COPY backend/package.json backend/
 RUN npm install --omit=dev --workspace @ib/backend
 
 RUN npm install -g pm2@5
+
+# 从 mongo:7 官方镜像提取 mongodump，供「整库备份」接口在容器内直接调用
+COPY --from=mongo:7 /usr/bin/mongodump /usr/local/bin/mongodump
 
 COPY --from=build /app/backend/dist backend/dist
 
