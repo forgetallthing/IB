@@ -13,6 +13,7 @@
 - **多用户**：JWT 登录（scrypt 密码哈希）；管理员可管理用户（创建/禁用/重置密码），普通用户可在「系统设置」修改自己的用户名密码
 - **权限分层**：用户管理 / 标签管理 / 导入导出仅管理员可见；个人工作台与数据看板所有用户可用
 - **多端**：Web（响应式）+ 微信小程序（Taro），数据互通
+- **PWA 主屏图标**：iPad/安卓 Pad/手机可将网站「添加到主屏幕」，桌面图标点击直达，独立窗口运行
 - **数据导入导出**：JSON 格式，管理员操作
 - **提示体验**：全局右上角 Toast 通知、自定义确认弹窗
 
@@ -116,6 +117,16 @@ npm run dev:h5        # http://localhost:10086
 
 - `pages/editor/index.tsx`（详情/编辑，带 id）与 `pages/create/index.tsx`（新建 tab）都是**薄壳**，真正逻辑在 `pages/editor/EditorView.tsx`。页面文件之间禁止互相 import，否则 Taro 会给每个页面模块注入 Page 注册副作用，导致 `Please do not register multiple Pages` 崩溃
 - Markdown 渲染使用 towxml 组件（`src/components/towxml`，light 主题）；正文中 http(s) 链接点击后复制到剪贴板（小程序无法直接调起浏览器），站内路径直接导航
+
+## 添加到主屏幕（Pad / 手机桌面图标）
+
+Web 端已支持 PWA：用浏览器打开网站后「添加到主屏幕」，桌面会生成图标，点击以**独立窗口**（无地址栏）直接打开网站。
+
+- **iPad**：Safari 打开网站 → 分享按钮 → 「添加到主屏幕」
+- **Android**：Chrome 菜单 → 「添加到主屏幕」/「安装应用」
+- 需 HTTPS 访问（生产环境已配置）；图标与名称来自 `frontend/public/manifest.json` 与 `frontend/public/icons/`
+- 修改图标设计后运行 `powershell -ExecutionPolicy Bypass -File frontend/scripts/gen-icons.ps1` 重新生成 PNG
+- 当前 `display: standalone` 为独立窗口模式；若希望点击图标仍打开带地址栏的浏览器，将其改为 `browser` 即可
 
 ## Docker 部署（推荐）
 
