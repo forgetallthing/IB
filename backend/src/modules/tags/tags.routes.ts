@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { TagModel } from '../../models/tag.model.js';
+import { QuestionModel } from '../../models/question.model.js';
 
 export async function registerTagRoutes(app: FastifyInstance) {
   async function requireAuth(request: any, reply: any) {
@@ -25,6 +26,14 @@ export async function registerTagRoutes(app: FastifyInstance) {
     if (rejected) return rejected;
 
     const tags = await TagModel.find().sort({ displayOrder: 1, createdAt: -1 }).lean();
+
+    // 统计每个标签当前绑定的笔记数量（tags 存的是标签名字符串）
+    const countRows = await QuestionModel.aggregate<{ _id: string; count: number }>([
+      { $unwind: '$tags' },
+      { $group: { _id: '$tags', count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map(countRows.map((row) => [row._id, row.count]));
+
     return tags.map((tag) => ({
       id: String(tag._id),
       name: tag.name,
@@ -32,6 +41,7 @@ export async function registerTagRoutes(app: FastifyInstance) {
       description: tag.description,
       active: tag.active,
       displayOrder: tag.displayOrder,
+      questionCount: countMap.get(tag.name) ?? 0,
       createdAt: tag.createdAt,
       updatedAt: tag.updatedAt,
     }));

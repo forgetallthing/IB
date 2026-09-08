@@ -21,6 +21,7 @@ interface TagItem {
   description: string;
   active: boolean;
   displayOrder: number;
+  questionCount?: number;
 }
 
 interface MeItem {
@@ -462,6 +463,7 @@ onMounted(refresh);
             <span class="tag-dot" :style="{ backgroundColor: tag.color }"></span>
             <div>
               <strong>{{ tag.name }}</strong>
+              <span class="tag-count">{{ tag.questionCount ?? 0 }} 篇</span>
               <p>{{ tag.description || '无描述' }} · 顺序 {{ tag.displayOrder }}<span v-if="!tag.active"> · 已停用</span></p>
             </div>
           </div>
@@ -699,6 +701,17 @@ h2 + .list {
 
 .tag-main strong {
   font-size: 14px;
+}
+
+.tag-count {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .grip {

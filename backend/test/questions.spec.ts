@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { connectDatabase, stopInMemoryDatabase } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { seedDefaultAdmin } from '../src/bootstrap/seed-admin.js';
-import { seedDefaultTags } from '../src/bootstrap/seed-tags.js';
+import { seedDefaultTags } from './helpers/seed-tags.js';
 import { appConfig } from '../src/config.js';
 
 let app: Awaited<ReturnType<typeof createApp>>;

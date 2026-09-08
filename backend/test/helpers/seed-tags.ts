@@ -1,4 +1,4 @@
-import { TagModel } from '../models/tag.model.js';
+import { TagModel } from '../../src/models/tag.model.js';
 
 const defaultTags = [
   { name: '基础', color: '#efe8dd', description: '通用基础笔记', displayOrder: 1 },
@@ -6,6 +6,7 @@ const defaultTags = [
   { name: '后端', color: '#e9f7ef', description: '后端相关笔记', displayOrder: 3 },
 ];
 
+// 仅测试用：生产环境不再自动播种默认标签（用户删除后不应被重新创建）
 export async function seedDefaultTags() {
   for (const tag of defaultTags) {
     const exists = await TagModel.findOne({ name: tag.name }).exec();
