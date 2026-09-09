@@ -247,7 +247,6 @@ async function save() {
     const payload = {
       title: form.title,
       content: form.content,
-      answer: '',
       tags: selectedTags,
       difficulty: form.difficulty,
       visibility: form.visibility,
@@ -284,7 +283,6 @@ async function analyze() {
       body: JSON.stringify({
         title: form.title,
         content: form.content,
-        answer: '',
       }),
     });
 

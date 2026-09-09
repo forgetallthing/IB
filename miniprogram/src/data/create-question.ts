@@ -19,7 +19,6 @@ export default function createQuestion(input: {
     id: nextQuestionId(),
     title: input.title,
     content: input.content,
-    answer: '',
     tags: input.tags ?? [],
     difficulty: input.difficulty ?? 'medium',
     creatorId: user.id,

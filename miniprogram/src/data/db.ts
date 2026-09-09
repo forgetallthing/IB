@@ -52,7 +52,6 @@ function q(
     id: `q_${n}`,
     title,
     content,
-    answer: '',
     tags,
     difficulty,
     creatorId,

@@ -4,7 +4,6 @@ const questionSchema = new Schema(
   {
     title: { type: String, required: true, trim: true },
     content: { type: String, required: true },
-    answer: { type: String, default: '' },
     tags: { type: [String], default: [] },
     difficulty: { type: String, enum: ['easy', 'medium', 'hard'], required: true, default: 'medium' },
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },

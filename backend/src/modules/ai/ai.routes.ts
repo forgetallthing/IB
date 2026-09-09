@@ -17,7 +17,7 @@ interface CozeMessage {
 
 export async function registerAiRoutes(app: FastifyInstance) {
   app.post('/api/ai/analyze', async (request) => {
-    const body = request.body as { title?: string; content?: string; answer?: string };
+    const body = request.body as { title?: string; content?: string };
     const content = `${body.title ?? ''} ${body.content ?? ''}`.trim();
 
     return {

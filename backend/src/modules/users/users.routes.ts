@@ -241,7 +241,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
             as: 'question',
           },
         },
-        { $addFields: { title: { $first: '$question.title' } } },
+        { $addFields: { title: { $arrayElemAt: ['$question.title', 0] } } },
         { $project: { questionId: 1, feedback: 1, createdAt: 1, title: 1 } },
       ]),
     ]);
@@ -305,7 +305,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
       QuizLogModel.aggregate<{ tag: string; total: number; known: number; fuzzy: number; forgot: number }>([
         { $match: { userId: userIdObj, action: 'review' } },
         { $lookup: { from: 'questions', localField: 'questionId', foreignField: '_id', as: 'question' } },
-        { $addFields: { question: { $first: '$question' } } },
+        { $addFields: { question: { $arrayElemAt: ['$question', 0] } } },
         { $unwind: { path: '$question.tags', preserveNullAndEmptyArrays: false } },
         {
           $group: {

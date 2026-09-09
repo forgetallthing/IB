@@ -87,7 +87,6 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         _id: unknown;
         title: string;
         content: string;
-        answer?: string;
         tags: string[];
         difficulty: 'easy' | 'medium' | 'hard';
         creatorId: unknown;
@@ -103,7 +102,6 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         id: String(item._id),
         title: item.title,
         content: item.content,
-        answer: item.answer ?? '',
         tags: item.tags,
         difficulty: item.difficulty,
         creatorId: String(item.creatorId),
@@ -189,7 +187,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
             as: 'state',
           },
         },
-        { $addFields: { state: { $first: '$state' } } },
+        { $addFields: { state: { $arrayElemAt: ['$state', 0] } } },
         {
           $project: {
             _id: 1,
@@ -341,7 +339,6 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     const question = await QuestionModel.create({
       title: body.title,
       content: body.content,
-      answer: '',
       tags: body.tags ?? [],
       difficulty: body.difficulty ?? 'medium',
       creatorId: body.creatorId ?? (user?.sub ? user.sub : null),
@@ -377,7 +374,6 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       id: String(item._id),
       title: item.title,
       content: item.content,
-      answer: item.answer ?? '',
       tags: item.tags,
       difficulty: item.difficulty,
       creatorId: String(item.creatorId),

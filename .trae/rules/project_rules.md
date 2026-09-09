@@ -20,6 +20,7 @@
 - 导入导出已改为整库备份 `GET /api/backup/export`（spawn mongodump --archive --gzip，仅管理员），导入功能暂未实现
 - `GET /api/questions` 可见性过滤：前端路由守卫强制游客先登录（产品上游客看不到任何内容）；API 层兜底过滤——未登录仅 public，登录用户 public + 自己的，admin 全部
 - 敏感接口（如登录）用 @fastify/rate-limit 限流，`global: false` 按路由启用；app.ts 已设 `trustProxy: true`
+- 聚合操作符须兼容本地 MongoDB 4.2：禁用 4.4+ 的 `$first`/`$last` 数组操作符，用 `$arrayElemAt: [expr, 0]` 代替；测试用内存库是 7.x，测不出此差异
 - 图片存 GridFS（`/api/images`），清理走引用扫描 GC（dry-run 先行）
 - 新增路由时注意：Question 模型缺索引、搜索 q 未做正则转义，属已知改进项，勿在无关改动中顺手重构
 

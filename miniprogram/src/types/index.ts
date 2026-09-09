@@ -21,7 +21,6 @@ export interface Question {
   id: string;
   title: string;
   content: string;
-  answer: string;
   tags: string[];
   difficulty: Difficulty;
   creatorId: string;
