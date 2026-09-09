@@ -22,5 +22,6 @@ miniprogram/.pai/
 # 本地 mongodump 备份（勿提交）
 .backup*/
 
-# ecocool 爬取数据（勿提交）
+# ecocool 爬取数据与脚本（勿提交）
 ecool-export/
+scripts/ecool-crawl.mjs
