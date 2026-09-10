@@ -22,6 +22,10 @@
 - 敏感接口（如登录）用 @fastify/rate-limit 限流，`global: false` 按路由启用；app.ts 已设 `trustProxy: true`
 - 聚合操作符须兼容本地 MongoDB 4.2：禁用 4.4+ 的 `$first`/`$last` 数组操作符，用 `$arrayElemAt: [expr, 0]` 代替；测试用内存库是 7.x，测不出此差异
 - 图片存 GridFS（`/api/images`），清理走引用扫描 GC（dry-run 先行）
+- 笔记类型 `type: 'qa'（回想，默认）| 'article'（文章）`：每日回想抽题池仅取 qa；`GET /api/questions` 支持 type 筛选；type 改回 qa 时自动清空 seriesId/order
+- Series 为创建者私有域：增删改与成员文章调整（添加/移出/排序）仅创建者或 admin；一篇笔记最多属于一个系列（seriesId + order）；删除系列 = 解绑文章而非删除文章
+- 系列枚举与目录按笔记可见性过滤：他人仅可见「含至少一篇可见文章」的系列与其中可见文章
+- 系列排序：`Series.order` 升序（新系列追加末尾），`PATCH /api/series/reorder` 全量提交新顺序（共享目录，登录即可拖）；文章目录排序走 `PATCH /api/series/:id/reorder`（仅创建者/admin）
 - 新增路由时注意：Question 模型缺索引、搜索 q 未做正则转义，属已知改进项，勿在无关改动中顺手重构
 
 ## 部署约束
@@ -40,6 +44,9 @@
 - Vditor 资源必须本地加载（public/vditor，postinstall 复制），禁用 CDN
 - 详情页 Markdown 渲染分两步（标题立即、正文延时 350ms）并用 session 缓存，避免卡顿
 - v-html 渲染 Markdown 前需 sanitize（已知待办：引入 DOMPurify）
+- 编辑页把已入系列的文章切回「回想」时，必须先弹 `useConfirm` 确认（提示将移出系列），取消则保持原类型
+- 系列笔记页（/series）为目录树：系列行点击折叠/展开（默认折叠）、展开显示文章目录、点文章行进详情；系列行与文章行同级拖拽排序；管理操作仅对自己创建的系列显示；添加文章弹层仅列「自己创建、article 类型、未入任何系列」的笔记
+- 详情页文章类型不显示自评反馈按钮，显示所属系列徽标（点击跳转系列笔记页）
 
 ## 小程序约束（miniprogram/）
 
@@ -51,7 +58,7 @@
 
 ## 操作规范
 
-- 改后端后：`npm run typecheck -w @ib/backend` + `npm test -w @ib/backend -- --run`（13 个测试须全过）
+- 改后端后：`npm run typecheck -w @ib/backend` + `npm test -w @ib/backend -- --run`（26 个测试须全过）
 - 改前端后：`npm run typecheck -w @ib/frontend` + `npm run build -w @ib/frontend`
 - 数据库变更：先只读检查 → mongodump 备份到 `.backup-*`（不入 git）→ 再修改 → 验证计数；服务器库连接串在 `backend/.env` 的 MONGO_URI
 - 本地 mongodump/mongo 工具在 `D:\software\mongo\bin`（shell 版本 4.2）

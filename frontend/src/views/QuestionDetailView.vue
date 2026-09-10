@@ -16,6 +16,8 @@ interface QuestionItem {
   difficulty: 'easy' | 'medium' | 'hard';
   creatorName: string;
   visibility: 'public' | 'private';
+  type?: 'qa' | 'article';
+  series?: { id: string; title: string };
   source?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -73,7 +75,14 @@ onMounted(loadDetail);
     <article v-if="item" class="panel">
       <div class="detail-head">
         <div>
-          <p class="meta">{{ item.creatorName }} · {{ item.visibility === 'public' ? '公开' : '私有' }}</p>
+          <p class="meta">
+            {{ item.creatorName }}
+            · {{ item.visibility === 'public' ? '公开' : '私有' }}
+            · {{ item.type === 'article' ? '文章' : '回想' }}
+            <button v-if="item.series" type="button" class="series-badge" @click="router.push('/series')">
+              系列 · {{ item.series.title }}
+            </button>
+          </p>
           <h1 class="title">{{ item.title }}</h1>
         </div>
         <span class="pill" :class="`difficulty-${item.difficulty}`">{{ difficultyLabels[item.difficulty] }}</span>
@@ -120,5 +129,24 @@ onMounted(loadDetail);
 .content :deep(img) {
   max-width: 100%;
   border-radius: 8px;
+}
+
+.series-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 10px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  vertical-align: 1px;
+  transition: background 0.15s ease;
+}
+
+.series-badge:hover {
+  background: rgba(13, 148, 136, 0.2);
 }
 </style>

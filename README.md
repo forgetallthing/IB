@@ -4,8 +4,9 @@
 
 ## 功能特性
 
-- **笔记管理**：Vditor Markdown 编辑器（标题与正文，均支持粘贴/拖拽/选择图片上传）、全站 Markdown 渲染、列表默认折叠答案、多条件勾选筛选（标签 / 难度 / 可见性，均支持多选且本地记忆）
-- **每日回想**：间隔重复学习系统——按出现次数加权随机抽题（越陌生越优先），对照回忆后自评反馈（没记住清零重推 / 模糊 +1 / 记住了 +2 / 完全掌握不再推送）；点击自评选项才计一次完整回想；支持手动档位（1-4 档重置出现次数并恢复自动调节，0 档完全掌握锁定）
+- **笔记管理**：Vditor Markdown 编辑器（标题与正文，均支持粘贴/拖拽/选择图片上传）、全站 Markdown 渲染、列表默认折叠答案、多条件勾选筛选（标签 / 难度 / 可见性 / 类型，均支持多选且本地记忆）
+- **笔记类型与系列**：笔记分「回想（qa）/ 文章（article）」两种类型，文章不进每日回想抽题池（读与记分离）；「系列笔记」页可创建系列、把自己的文章按序组织成专栏（拖拽排序、添加/移出文章、改名、删除），他人系列按可见性只读浏览
+- **每日回想**：间隔重复学习系统——按出现次数加权随机抽题（越陌生越优先，仅回想类型笔记），对照回忆后自评反馈（没记住清零重推 / 模糊 +1 / 记住了 +2 / 完全掌握不再推送）；点击自评选项才计一次完整回想；支持手动档位（1-4 档重置出现次数并恢复自动调节，0 档完全掌握锁定）
 - **数据看板**：统计卡（今日回想/累计回想/连续打卡/完全掌握）、GitHub 风格回想热力图（53 周，四档色阶，今天固定最右）、近 7 天趋势、推送频率分布、薄弱标签 Top 5、自评反馈分布、我的笔记统计；PC/Pad 一屏锁定不滚动
 - **图片上传**：MongoDB GridFS 存储，标题/正文统一走 `/api/images`，小程序端渲染时自动补全绝对地址
 - **标签体系**：自定义标签（颜色、描述、排序），支持启用/停用，可随笔记归档
@@ -31,15 +32,15 @@
 ```
 IB/
 ├── frontend/               # Vue 3 前端
-│   ├── src/views/          # 页面（列表/编辑/详情/登录/设置）
+│   ├── src/views/          # 页面（列表/编辑/详情/系列/登录/设置）
 │   ├── src/components/     # 确认弹窗、Toast、筛选勾选组
 │   ├── src/composables/    # useConfirm / useToast
 │   ├── public/vditor/      # Vditor 静态资源（postinstall 自动复制）
 │   └── scripts/copy-vditor.mjs
 ├── backend/                # Fastify 后端
-│   ├── src/modules/        # auth / users / questions / tags / import-export / ai / images
+│   ├── src/modules/        # auth / users / questions / tags / series / import-export / ai / images
 │   ├── src/services/       # imageStore（GridFS 图片存取）
-│   └── src/models/         # question / tag / user / quizState（回想权重状态）/ quizLog（回想日志）
+│   └── src/models/         # question / tag / user / series / quizState（回想权重状态）/ quizLog（回想日志）
 ├── docker/nginx.conf       # nginx 配置（HTTPS + SPA 回退 + /api 反代）
 ├── Dockerfile              # 多阶段构建（build → backend → web）
 ├── docker-compose.yml      # 三容器编排

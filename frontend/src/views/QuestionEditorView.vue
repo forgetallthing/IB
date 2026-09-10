@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
+import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
 
@@ -16,6 +17,8 @@ interface QuestionItem {
   creatorId: string;
   creatorName: string;
   visibility: 'public' | 'private';
+  type?: 'qa' | 'article';
+  series?: { id: string; title: string };
   aiSummary?: string;
   aiSuggestedTags?: string[];
   aiSuggestedDifficulty?: 'easy' | 'medium' | 'hard';
@@ -53,7 +56,11 @@ const form = reactive({
   selectedTagIds: [] as string[],
   difficulty: 'medium' as 'easy' | 'medium' | 'hard',
   visibility: 'public' as 'public' | 'private',
+  type: 'qa' as 'qa' | 'article',
 });
+
+// 服务端加载时的原始系列归属：改回想类型时用于弹确认框
+const loadedSeries = ref<{ id: string; title: string } | null>(null);
 
 const aiPreview = reactive({
   summary: '',
@@ -70,6 +77,10 @@ const difficultyOptions = [
 const visibilityOptions = [
   { label: '公开', value: 'public' },
   { label: '私有', value: 'private' },
+] as const;
+const typeOptions = [
+  { label: '回想', value: 'qa' },
+  { label: '文章', value: 'article' },
 ] as const;
 
 const { notice, fail } = useToast();
@@ -225,6 +236,8 @@ async function loadQuestion(id: string) {
     form.selectedTagIds = tagOptions.value.filter((tag) => item.tags.includes(tag.name)).map((tag) => tag.id);
     form.difficulty = item.difficulty;
     form.visibility = item.visibility;
+    form.type = item.type ?? 'qa';
+    loadedSeries.value = item.series ?? null;
     aiPreview.summary = item.aiSummary ?? '';
     aiPreview.suggestedTags = item.aiSuggestedTags ?? [];
     aiPreview.suggestedDifficulty = item.aiSuggestedDifficulty ?? 'medium';
@@ -232,6 +245,18 @@ async function loadQuestion(id: string) {
     fail(error instanceof Error ? error.message : '加载笔记失败');
   } finally {
     loading.value = false;
+  }
+}
+
+// 类型切换：已入系列的文章改回想时弹确认（保存后端会自动移出系列）
+async function onTypeChange() {
+  if (form.type === 'qa' && loadedSeries.value) {
+    const ok = await showConfirm({
+      title: '切换为回想类型',
+      message: `该笔记已加入系列「${loadedSeries.value.title}」，改回回想类型后将自动移出该系列。确定切换吗？`,
+      confirmText: '切换',
+    });
+    if (!ok) form.type = 'article';
   }
 }
 
@@ -250,6 +275,7 @@ async function save() {
       tags: selectedTags,
       difficulty: form.difficulty,
       visibility: form.visibility,
+      type: form.type,
       aiSummary: aiPreview.summary || undefined,
       aiSuggestedTags: aiPreview.suggestedTags,
       aiSuggestedDifficulty: aiPreview.suggestedDifficulty,
@@ -345,6 +371,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="choice-grid">
+        <div class="field">
+          <span class="field-label">类型</span>
+          <div class="choice-row">
+            <label v-for="option in typeOptions" :key="option.value" class="choice-item">
+              <input v-model="form.type" type="radio" :value="option.value" @change="onTypeChange" />
+              <span>{{ option.label }}</span>
+            </label>
+          </div>
+        </div>
+
         <div class="field">
           <span class="field-label">难度</span>
           <div class="choice-row">
@@ -453,7 +489,7 @@ onBeforeUnmount(() => {
 
 .choice-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 

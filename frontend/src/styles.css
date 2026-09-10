@@ -46,7 +46,10 @@ body {
 .page {
   display: grid;
   gap: 20px;
-  animation: page-in 0.28s ease both;
+  /* 注意：不能加 both/forwards 填充——填充会让动画常驻应用，
+     Chrome 会把带 transform 动画的元素当成 position:fixed 后代的包含块，
+     导致弹窗遮罩无法铺满视口 */
+  animation: page-in 0.28s ease;
 }
 
 @keyframes page-in {

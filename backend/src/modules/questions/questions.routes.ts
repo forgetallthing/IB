@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { Types, isValidObjectId } from 'mongoose';
 import { QuestionModel } from '../../models/question.model.js';
+import { SeriesModel } from '../../models/series.model.js';
 import { QuizStateModel, levelWeight, autoLevelByDrawCount } from '../../models/quizState.model.js';
 import { QuizLogModel } from '../../models/quizLog.model.js';
 
@@ -13,6 +14,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       creatorId?: string;
       creatorName?: string;
       visibility?: 'public' | 'private' | Array<'public' | 'private'>;
+      type?: 'qa' | 'article';
       page?: string;
       limit?: string;
     };
@@ -73,6 +75,12 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     if (query.tags) {
       filter.tags = Array.isArray(query.tags) ? { $in: query.tags } : { $in: [query.tags] };
     }
+    if (query.type === 'article') {
+      filter.type = 'article';
+    } else if (query.type === 'qa') {
+      // 兼容存量数据：缺 type 字段的历史笔记视为回想类型
+      filter.type = { $ne: 'article' };
+    }
 
     // 分页：page 从 1 开始，limit 默认 20、上限 100
     const page = Math.max(1, Number(query.page) || 1);
@@ -92,6 +100,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         creatorId: unknown;
         creatorName: string;
         visibility: 'public' | 'private';
+        type?: 'qa' | 'article' | null;
+        seriesId?: unknown;
         source?: string | null;
         aiSummary?: string | null;
         aiSuggestedTags?: string[] | null;
@@ -107,6 +117,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         creatorId: String(item.creatorId),
         creatorName: item.creatorName,
         visibility: item.visibility,
+        type: (item.type as 'qa' | 'article') ?? 'qa',
+        seriesId: item.seriesId ? String(item.seriesId) : undefined,
         source: item.source ?? undefined,
         aiSummary: item.aiSummary ?? undefined,
         aiSuggestedTags: item.aiSuggestedTags ?? undefined,
@@ -146,6 +158,9 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         : me.role === 'admin'
           ? {}
           : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] };
+
+    // 读与记分离：文章类型不进入每日回想候选池（缺 type 字段的存量笔记视为回想）
+    match.type = { $ne: 'article' };
 
     // 筛选条件（与列表接口相同的 $in 语义：任一匹配）
     if (query.difficulty) {
@@ -253,6 +268,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       difficulty: item.difficulty as 'easy' | 'medium' | 'hard',
       creatorName: item.creatorName as string,
       visibility: item.visibility as 'public' | 'private',
+      type: (item.type as 'qa' | 'article') ?? 'qa',
       drawCount: picked.drawCount,
       mastered: picked.mastered,
     };
@@ -324,6 +340,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       creatorId?: string;
       creatorName?: string;
       visibility?: 'public' | 'private';
+      type?: 'qa' | 'article';
       source?: string;
       aiSummary?: string;
       aiSuggestedTags?: string[];
@@ -344,6 +361,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       creatorId: body.creatorId ?? (user?.sub ? user.sub : null),
       creatorName: body.creatorName ?? (user?.username ? user.username : 'unknown'),
       visibility: body.visibility ?? 'public',
+      type: body.type === 'article' ? 'article' : 'qa',
       source: body.source,
       aiSummary: body.aiSummary,
       aiSuggestedTags: body.aiSuggestedTags ?? [],
@@ -370,6 +388,12 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       return reply.status(403).send({ message: '仅创建者或管理员可以查看该笔记' });
     }
 
+    // 所属系列信息：编辑器与详情页展示用
+    const seriesDoc = item.seriesId
+      ? ((await SeriesModel.findById(item.seriesId).select('title').lean()) as { _id: unknown; title: string } | null)
+      : null;
+    const seriesInfo = seriesDoc ? { id: String(seriesDoc._id), title: seriesDoc.title } : undefined;
+
     return {
       id: String(item._id),
       title: item.title,
@@ -379,6 +403,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       creatorId: String(item.creatorId),
       creatorName: item.creatorName,
       visibility: item.visibility,
+      type: (item.type as 'qa' | 'article') ?? 'qa',
+      series: seriesInfo,
       source: item.source ?? undefined,
       aiSummary: item.aiSummary ?? undefined,
       aiSuggestedTags: item.aiSuggestedTags ?? undefined,
@@ -402,6 +428,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       tags: string[];
       difficulty: 'easy' | 'medium' | 'hard';
       visibility: 'public' | 'private';
+      type: 'qa' | 'article';
     }>;
 
     const existing = await QuestionModel.findById(params.id);
@@ -418,6 +445,14 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     if (body.tags !== undefined) existing.tags = body.tags;
     if (body.difficulty !== undefined) existing.difficulty = body.difficulty;
     if (body.visibility !== undefined) existing.visibility = body.visibility;
+    if (body.type !== undefined) {
+      existing.type = body.type === 'article' ? 'article' : 'qa';
+      // 改回想类型时自动移出系列（清空系列归属与序号）
+      if (existing.type === 'qa') {
+        existing.set('seriesId', undefined);
+        existing.set('order', undefined);
+      }
+    }
 
     await existing.save();
     return { ok: true };

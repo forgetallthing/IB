@@ -9,6 +9,7 @@ import { registerQuestionRoutes } from './modules/questions/questions.routes.js'
 import { registerAiRoutes } from './modules/ai/ai.routes.js';
 import { registerBackupRoutes } from './modules/backup/backup.routes.js';
 import { registerTagRoutes } from './modules/tags/tags.routes.js';
+import { registerSeriesRoutes } from './modules/series/series.routes.js';
 import { registerImageRoutes } from './modules/images/images.routes.js';
 
 export async function createApp() {
@@ -50,6 +51,7 @@ export async function createApp() {
   await registerAiRoutes(app);
   await registerBackupRoutes(app);
   await registerTagRoutes(app);
+  await registerSeriesRoutes(app);
   await registerImageRoutes(app);
 
   return app;

@@ -121,6 +121,9 @@ flowchart LR
   aiSummary?: string;
   aiSuggestedTags?: string[];
   aiSuggestedDifficulty?: 'easy' | 'medium' | 'hard';
+  type: 'qa' | 'article';   // 笔记类型：qa=回想（默认，参与每日回想）；article=文章（不进回想池）
+  seriesId?: string;        // 所属系列，一篇笔记最多属于一个系列
+  order?: number;           // 系列内顺序：order 升序 + createdAt 兜底
   createdAt: Date;
   updatedAt: Date;
 }
@@ -131,6 +134,9 @@ flowchart LR
 - 标题必填。
 - 题干和答案为 Markdown 文本，支持内联图片（`/api/images/<id>` 引用，见 4.5）。
 - 私有题目仅创建者和 admin 可见。
+- type 默认 'qa'，存量数据全部视为回想类型，无需迁移。
+- type 更新为 'qa' 时自动清空 seriesId/order（移出系列）。
+- seriesId 仅能指向自己创建的系列（admin 除外）。
 - 不保留版本历史。
 - 删除采用硬删除，不提供回收站。
 
@@ -192,6 +198,27 @@ autoLevelByDrawCount(drawCount):
 - 上传限制：登录用户、`image/*`、单张 ≤ 10MB；读取公开访问、强缓存一年。
 - 暂无孤儿回收机制（规划中：以「标题+正文引用扫描」为标准的定期 GC）。
 
+### 4.6 Series（系列笔记）
+
+```ts
+{
+  _id: string;
+  title: string;           // 必填
+  description?: string;
+  creatorId: string;       // 创建者私有域
+  creatorName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+- 系列归属为创建者私有域：成员文章调整、改名、删除仅创建者或 admin 可操作。
+- 成员关系挂在笔记上（`Question.seriesId` + `Question.order`），一篇笔记最多属于一个系列。
+- 系列不设独立可见性字段：目录按笔记可见性过滤；枚举时仅返回「自己的系列」或「含至少一篇可见文章的系列」。
+- 删除系列 = 解绑：成员笔记的 seriesId/order 置空，笔记本身不删除。
+- 系列排序：`Series.order` 升序，新系列追加到末尾（当前最大 order + 1）。
+- 文章目录排序：`Question.order` 升序，createdAt 兜底。
+
 ## 5. 权限设计
 
 ### 5.1 角色权限矩阵
@@ -209,6 +236,10 @@ autoLevelByDrawCount(drawCount):
 | 删除他人题目 | Yes | No |
 | 导入导出 | Yes | Yes |
 | AI 辅助 | Yes | Yes |
+| 创建系列 | Yes | Yes |
+| 管理自己创建的系列 | Yes | Yes |
+| 管理他人系列 | Yes | No |
+| 浏览他人系列目录 | Yes | Yes（仅含可见文章） |
 
 ### 5.2 鉴权方式
 
@@ -306,6 +337,7 @@ autoLevelByDrawCount(drawCount):
 - difficulty：难度。
 - creatorId：创建人。
 - visibility：可见性。
+- type：笔记类型（qa / article）。
 - page：页码。
 - pageSize：每页数量。
 
@@ -318,6 +350,7 @@ autoLevelByDrawCount(drawCount):
 
 - 返回题目详情。
 - 按可见性和权限做访问控制。
+- 返回所属系列信息 `series: { id, title }`（未入系列时为空），供编辑器与详情页展示。
 
 #### PUT /api/questions/:id
 
@@ -335,6 +368,7 @@ autoLevelByDrawCount(drawCount):
 
 - 未登录：仅公开题目，不记录回想状态。
 - 登录：公开 + 自己的私有（admin 全部），排除 `mastered`，按 `levelWeight(autoLevelByDrawCount(drawCount))` 加权轮盘随机。
+- 候选池仅 `type='qa'` 的笔记：文章类型不参与每日回想（读与记分离）。
 - 响应携带题目详情 + 当前 `drawCount`/`mastered` 状态。
 - 抽题本身不计数、不写日志。
 
@@ -410,6 +444,57 @@ autoLevelByDrawCount(drawCount):
 - 导入前做 schema 校验。
 - 导入结果返回成功条数和失败条数。
 
+### 6.8 Series（系列笔记）
+
+#### GET /api/series
+
+- 登录可用。
+- 返回当前用户可见的系列列表：自己的全部（含空系列）+ 含至少一篇可见文章的他人系列。
+- 每项含 `articleCount`（当前用户可见的文章数）。
+
+#### GET /api/series/:id
+
+- 返回系列详情 + 有序目录（order 升序 + createdAt 兜底）。
+- 目录按笔记可见性过滤。
+
+#### POST /api/series
+
+- 登录即可创建。
+- body：`{ title, description? }`。
+
+#### PATCH /api/series/:id
+
+- 创建者或 admin。
+- body：`{ title?, description? }`。
+
+#### DELETE /api/series/:id
+
+- 创建者或 admin。
+- 解绑全部成员文章（seriesId/order 置空），笔记本身不删除。
+
+#### POST /api/series/:id/articles
+
+- 创建者或 admin。
+- body：`{ questionIds: string[] }`，追加到目录末尾。
+- 校验：笔记存在、`type='article'`、创建者本人（admin 可操作他人文章）、未加入其他系列。
+
+#### DELETE /api/series/:id/articles/:questionId
+
+- 创建者或 admin。
+- 将文章移出系列（seriesId/order 置空）。
+
+#### PATCH /api/series/:id/reorder
+
+- 创建者或 admin。
+- body：`{ questionIds: string[] }`（全量新顺序）。
+- 校验与当前成员集合一致后按下标写入 order。
+
+#### PATCH /api/series/reorder
+
+- 登录可用（共享目录，所有用户均可调整系列顺序）。
+- body：`{ seriesIds: string[] }`（全量新顺序）。
+- 按数组下标写入 `Series.order`。
+
 ## 7. 搜索与筛选实现
 
 ### 7.1 查询能力
@@ -439,9 +524,10 @@ autoLevelByDrawCount(drawCount):
 ### 8.1 页面结构
 
 - 登录页。
-- 题目列表页。
+- 题目列表页（类型筛选：回想/文章）。
 - 题目详情页。
-- 题目编辑页。
+- 题目编辑页（含类型选择）。
+- 系列笔记页：目录树形式——系列行（整行可点击折叠/展开，默认折叠）+ 展开后显示文章目录；系列行与文章行均支持同级拖拽排序；点击文章行跳转详情页。管理操作仅对自己创建的系列显示。
 - 管理员用户管理页。
 - 导入导出页。
 
@@ -552,7 +638,8 @@ project/
 
 - 登录和权限测试。
 - 题目增删改查测试。
-- 搜索与筛选测试。
+- 搜索与筛选测试（含 type 过滤）。
+- 系列增删改查与成员文章管理测试（权限、类型校验、解绑与排序）。
 - 导入导出测试。
 - AI 失败降级测试。
 - 移动端响应式测试。
@@ -562,6 +649,8 @@ project/
 
 - 收藏题目。
 - 题单。
+- 小程序端系列与笔记类型界面同步。
+- 文章回想卡：从长文提取 Q&A 子卡片进入每日回想。
 - 编辑历史。
 - 回收站。
 - 更细粒度权限。

@@ -32,6 +32,7 @@ const loading = ref(false);
 const query = ref('');
 const difficulty = ref<string[]>([]);
 const visibility = ref<string[]>([]);
+const type = ref<string[]>([]);
 const tag = ref<string[]>([]);
 const items = ref<QuestionItem[]>([]);
 const tagOptions = ref<CheckOption[]>([]);
@@ -58,7 +59,7 @@ function persistFilters() {
   try {
     localStorage.setItem(
       FILTER_STORAGE_KEY,
-      JSON.stringify({ difficulty: difficulty.value, visibility: visibility.value, tag: tag.value }),
+      JSON.stringify({ difficulty: difficulty.value, visibility: visibility.value, type: type.value, tag: tag.value }),
     );
   } catch {
     /* 忽略存储失败（如隐私模式） */
@@ -70,6 +71,7 @@ function persistFilters() {
   const stored = loadStoredFilters();
   difficulty.value = asStringArray(stored.difficulty);
   visibility.value = asStringArray(stored.visibility);
+  type.value = asStringArray(stored.type);
   tag.value = asStringArray(stored.tag);
 }
 
@@ -93,6 +95,12 @@ const difficultyOptions: CheckOption[] = [
 const visibilityOptions: CheckOption[] = [
   { value: 'public', label: '公开' },
   { value: 'private', label: '私有' },
+];
+
+// 读与记分离：回想笔记参与每日回想，文章类型以阅读为主
+const typeOptions: CheckOption[] = [
+  { value: 'qa', label: '回想' },
+  { value: 'article', label: '文章' },
 ];
 
 const expanded = ref<Record<string, boolean>>({});
@@ -158,6 +166,7 @@ async function loadItems(reset = true) {
     if (query.value.trim()) params.set('q', query.value.trim());
     difficulty.value.forEach((value) => params.append('difficulty', value));
     visibility.value.forEach((value) => params.append('visibility', value));
+    type.value.forEach((value) => params.append('type', value));
     tag.value.forEach((value) => params.append('tags', value));
 
     const result = await request<{ items: QuestionItem[]; total: number; hasMore: boolean }>(`/questions?${params.toString()}`);
@@ -233,7 +242,7 @@ onBeforeUnmount(() => {
   observer = null;
 });
 
-watch([query, difficulty, visibility, tag], () => {
+watch([query, difficulty, visibility, type, tag], () => {
   persistFilters();
   loadItems(true);
 });
@@ -258,6 +267,7 @@ watch([query, difficulty, visibility, tag], () => {
       </div>
       <FilterCheckGroup v-model="difficulty" label="难度" :options="difficultyOptions" />
       <FilterCheckGroup v-model="visibility" label="可见性" :options="visibilityOptions" />
+      <FilterCheckGroup v-model="type" label="类型" :options="typeOptions" />
       <FilterCheckGroup v-model="tag" label="标签" :options="tagOptions" />
     </section>
 

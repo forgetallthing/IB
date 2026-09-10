@@ -8,6 +8,7 @@ import QuestionListView from './views/QuestionListView.vue';
 import QuestionQuizView from './views/QuestionQuizView.vue';
 import QuestionDetailView from './views/QuestionDetailView.vue';
 import QuestionEditorView from './views/QuestionEditorView.vue';
+import SeriesView from './views/SeriesView.vue';
 import SettingsView from './views/SettingsView.vue';
 import { useAuthStore } from './stores/auth';
 import './styles.css';
@@ -19,6 +20,7 @@ const routes = [
   { path: '/questions', component: QuestionListView },
   { path: '/quiz', component: QuestionQuizView },
   { path: '/questions/edit', component: QuestionEditorView },
+  { path: '/series', component: SeriesView },
   { path: '/settings', component: SettingsView },
   { path: '/questions/:id', component: QuestionDetailView },
 ];
