@@ -9,6 +9,9 @@ import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
 import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
+import { questionListDirty } from '../stores/dataDirty';
+
+defineOptions({ name: 'QuestionListView' });
 
 marked.setOptions({ gfm: true, breaks: true });
 

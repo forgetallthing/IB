@@ -7,6 +7,7 @@ import { request } from '../api';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
+import { questionListDirty } from '../stores/dataDirty';
 
 interface QuestionItem {
   id: string;
@@ -289,6 +290,7 @@ async function save() {
       form.id = result.id;
       notice('笔记已创建，可继续编辑');
     }
+    questionListDirty.value = true;
   } catch (error) {
     fail(error instanceof Error ? error.message : '保存失败');
   } finally {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onActivated, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { request } from '../api';
 import { showConfirm } from '../composables/useConfirm';
@@ -327,7 +327,13 @@ async function removeArticle(s: SeriesItem, article: CatalogArticle) {
   }
 }
 
-onMounted(loadSeries);
+// 页面被 KeepAlive 保活：每次回到本页刷新系列列表与已展开系列的目录（文章可能在别处被删除/移出）
+onActivated(() => {
+  loadSeries();
+  for (const id of Object.keys(expanded.value)) {
+    if (expanded.value[id] && articlesBySeries.value[id]) void loadArticles(id);
+  }
+});
 </script>
 
 <template>

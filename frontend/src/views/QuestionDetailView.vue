@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { marked } from 'marked';
 import { request } from '../api';
-import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 
 marked.setOptions({ gfm: true, breaks: true });
@@ -44,17 +43,10 @@ async function loadDetail() {
   }
 }
 
-async function deleteQuestion() {
-  if (!item.value) return;
-  const ok = await showConfirm({
-    title: '删除笔记',
-    message: '删除后无法恢复，确定要删除这条笔记吗？',
-    confirmText: '删除',
-    danger: true,
-  });
-  if (!ok) return;
-  await request(`/questions/${item.value.id}`, { method: 'DELETE' });
-  await router.push('/questions');
+// 返回来源列表：从系列目录进入时回系列页，其余回笔记中心（vue-router 在 history.state.back 记录来源）
+function backToList() {
+  if (typeof window.history.state?.back === 'string') router.back();
+  else router.push('/questions');
 }
 
 onMounted(loadDetail);
@@ -63,10 +55,9 @@ onMounted(loadDetail);
 <template>
   <section class="page">
     <div class="topbar">
-      <button class="secondary" type="button" @click="router.push('/questions')">返回列表</button>
+      <button class="secondary" type="button" @click="backToList">返回列表</button>
       <div v-if="item" class="actions">
         <button class="secondary" type="button" @click="router.push(`/questions/edit?id=${item.id}`)">编辑</button>
-        <button class="danger" type="button" @click="deleteQuestion">删除</button>
       </div>
     </div>
 

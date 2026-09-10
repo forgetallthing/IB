@@ -41,6 +41,8 @@
 ## 前端约束
 
 - 列表筛选状态持久化到 localStorage（key: `ib_question_filters`），进入页面恢复
+- 页面状态保活（KeepAlive）：列表页/系列页/每日回想三个有状态页面在 App.vue `keepAliveNames` 中保活，对应组件必须用 `defineOptions` 声明同名 name；新增保活页面时同步维护 App.vue 的 `keptScrollPaths`（滚动位置按路径记忆恢复）
+- 保活回访的数据刷新走脏标记：编辑页保存后置 `stores/dataDirty.ts` 的 `questionListDirty`，列表页 onActivated 消费后刷新；系列页 onActivated 静默刷新列表与已展开目录；登录/登出时 App.vue 清空保活缓存防串号
 - Vditor 资源必须本地加载（public/vditor，postinstall 复制），禁用 CDN
 - 详情页 Markdown 渲染分两步（标题立即、正文延时 350ms）并用 session 缓存，避免卡顿
 - v-html 渲染 Markdown 前需 sanitize（已知待办：引入 DOMPurify）

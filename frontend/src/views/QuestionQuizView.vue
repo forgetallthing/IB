@@ -8,6 +8,8 @@ import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
 import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
 
+defineOptions({ name: 'QuestionQuizView' });
+
 marked.setOptions({ gfm: true, breaks: true });
 
 interface QuizQuestion {

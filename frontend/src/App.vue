@@ -26,7 +26,11 @@
 
     <div class="content-shell">
       <main ref="mainEl" class="app-main">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <KeepAlive :include="keepAliveNames">
+            <component :is="Component" />
+          </KeepAlive>
+        </RouterView>
       </main>
       <button
         type="button"
@@ -48,12 +52,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import ToastHost from './components/ToastHost.vue';
+import { useAuthStore } from './stores/auth';
 
 const route = useRoute();
+const auth = useAuthStore();
 const menuOpen = ref(false);
 
 const isLoginPage = computed(() => route.path === '/login');
@@ -82,10 +88,38 @@ function closeMenu() {
   menuOpen.value = false;
 }
 
+// 保活有状态的页面：列表（页码/滚动/展开项）、系列（目录展开）、回想（作答现场）
+const keepAliveNames = ref<string[]>(['QuestionListView', 'SeriesView', 'QuestionQuizView']);
+
+// 登录/登出/切换账号时清空保活缓存，避免看到上一位用户的页面状态
+watch(
+  () => auth.token,
+  async () => {
+    const names = keepAliveNames.value;
+    keepAliveNames.value = [];
+    await nextTick();
+    keepAliveNames.value = names;
+  },
+);
+
+// 保活页面离开时 .app-main 的滚动位置会被重置，按路径记忆并在返回时恢复
+const keptScrollPaths = new Set(['/questions', '/series', '/quiz']);
+const scrollMemory = new Map<string, number>();
+
 watch(
   () => route.fullPath,
-  () => {
+  (to, from) => {
     closeMenu();
+    const toPath = to.split('?')[0];
+    if (from && mainEl.value) scrollMemory.set(from.split('?')[0], mainEl.value.scrollTop);
+    if (keptScrollPaths.has(toPath)) {
+      void nextTick(() => {
+        requestAnimationFrame(() => {
+          const saved = scrollMemory.get(toPath);
+          if (saved != null && mainEl.value) mainEl.value.scrollTop = saved;
+        });
+      });
+    }
   },
 );
 </script>
