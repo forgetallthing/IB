@@ -26,3 +26,4 @@ miniprogram/.pai/
 ecool-export/
 scripts/ecool-crawl.mjs
 scripts/ecocool-vip-crawl.mjs
+scripts/ecool-import.mjs
