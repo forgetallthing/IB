@@ -19,9 +19,10 @@ miniprogram/.auth/
 miniprogram/.swc/
 miniprogram/.pai/
 
-# 本地 mongodump 备份（勿提交）
-.backup*/
+# 本地 mongodump 备份（勿提交，兼容目录与归档文件）
+.backup*
 
 # ecocool 爬取数据与脚本（勿提交）
 ecool-export/
 scripts/ecool-crawl.mjs
+scripts/ecocool-vip-crawl.mjs

@@ -20,6 +20,7 @@ function argOf(name, fallback) {
 }
 const LIMIT = Number(argOf('--limit', 2));
 const IN_FILE = 'ecool-export/ecool_questions.jsonl';
+const IN_FILE_VIP = 'ecool-export/ecool_questions_vip.jsonl';
 
 // ---------- 连接串 ----------
 let uri = argOf('--uri', '');
@@ -60,7 +61,10 @@ function toDifficulty(record) {
 // ---------- 主流程 ----------
 if (!existsSync(IN_FILE)) { console.error(`找不到 ${IN_FILE}，先运行 ecocool-crawl.mjs`); process.exit(1); }
 const records = readFileSync(IN_FILE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
-console.log(`待导入记录: ${records.length} 条，本次上限 ${LIMIT} 条\n`);
+if (existsSync(IN_FILE_VIP)) {
+  records.push(...readFileSync(IN_FILE_VIP, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)));
+}
+console.log(`待导入记录: ${records.length} 条（免费 ${records.length - (records.filter((r) => r.source.vipLimit > 0)).length} + 会员 ${records.filter((r) => r.source.vipLimit > 0).length}），本次上限 ${LIMIT} 条\n`);
 
 const client = new MongoClient(uri);
 await client.connect();
