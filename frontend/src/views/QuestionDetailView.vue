@@ -156,18 +156,6 @@ onMounted(loadDetail);
   border-radius: 8px;
 }
 
-/* 站内关联链接（如面经关联题）用主题色区分于普通文本与外部链接 */
-.content :deep(a[href^='/']) {
-  color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(13, 148, 136, 0.35);
-}
-
-.content :deep(a[href^='/']:hover) {
-  color: #0f766e;
-  border-bottom-color: rgba(15, 118, 110, 0.7);
-}
-
 .series-badge {
   display: inline-block;
   margin-left: 4px;

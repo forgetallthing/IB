@@ -43,6 +43,18 @@ body {
 
 /* ---------- 页面骨架 ---------- */
 
+/* markdown 正文链接统一主题色（Vditor.preview 渲染：详情/列表摘要/回想等所有页面） */
+.vditor-reset a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.35);
+}
+
+.vditor-reset a:hover {
+  color: #0f766e;
+  border-bottom-color: rgba(15, 118, 110, 0.7);
+}
+
 .page {
   display: grid;
   /* 封顶为容器宽：auto 轨道 max 是 max-content，内部宽内容（如 vditor 工具栏）会把整页撑出横向溢出 */
