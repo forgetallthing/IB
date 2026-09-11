@@ -26,8 +26,9 @@
     <div class="content-shell">
       <main ref="mainEl" class="app-main">
         <RouterView v-slot="{ Component }">
+          <!-- KeepAlive 内不允许注释节点：详情页按 path 独立实例（key），每篇笔记一个保活实例 -->
           <KeepAlive :include="keepAliveNames">
-            <component :is="Component" />
+            <component :is="Component" :key="isDetailPath(route.path) ? route.path : undefined" />
           </KeepAlive>
         </RouterView>
       </main>
@@ -87,8 +88,8 @@ function closeMenu() {
   menuOpen.value = false;
 }
 
-// 保活有状态的页面：列表（页码/滚动/展开项）、系列（目录展开）、回想（作答现场）
-const keepAliveNames = ref<string[]>(['QuestionListView', 'SeriesView', 'QuestionQuizView']);
+// 保活有状态的页面：列表（页码/滚动/展开项）、系列（目录展开）、回想（作答现场）、详情（滚动/渲染结果）
+const keepAliveNames = ref<string[]>(['QuestionListView', 'SeriesView', 'QuestionQuizView', 'QuestionDetailView']);
 
 // 登录/登出/切换账号时清空保活缓存，避免看到上一位用户的页面状态
 watch(
@@ -101,21 +102,39 @@ watch(
   },
 );
 
+// 是否笔记详情页（/questions/:id，ObjectId；排除 /questions/edit 等）
+function isDetailPath(p: string): boolean {
+  return /^\/questions\/[a-f\d]{24}$/i.test(p);
+}
+
 // 保活页面离开时 .app-main 的滚动位置会被重置，按路径记忆并在返回时恢复
+// 详情页路径动态，前缀判断；前进跳转滚顶，返回恢复精确位置（保活 DOM 已在，无恢复偏差）
 const keptScrollPaths = new Set(['/questions', '/series', '/quiz']);
 const scrollMemory = new Map<string, number>();
+let lastNavPos = typeof window.history.state?.position === 'number' ? window.history.state.position : 0;
 
 watch(
   () => route.fullPath,
   (to, from) => {
     closeMenu();
+    const pos = typeof window.history.state?.position === 'number' ? window.history.state.position : 0;
+    const isBack = pos < lastNavPos;
+    lastNavPos = pos;
+
     const toPath = to.split('?')[0];
     if (from && mainEl.value) scrollMemory.set(from.split('?')[0], mainEl.value.scrollTop);
-    if (keptScrollPaths.has(toPath)) {
+    if (keptScrollPaths.has(toPath) || isDetailPath(toPath)) {
+      const isDetail = isDetailPath(toPath);
       void nextTick(() => {
         requestAnimationFrame(() => {
+          if (!mainEl.value) return;
+          // 前进进入详情：总是滚到顶部；返回才恢复之前浏览位置
+          if (isDetail && !isBack) {
+            mainEl.value.scrollTop = 0;
+            return;
+          }
           const saved = scrollMemory.get(toPath);
-          if (saved != null && mainEl.value) mainEl.value.scrollTop = saved;
+          if (saved != null) mainEl.value.scrollTop = saved;
         });
       });
     }

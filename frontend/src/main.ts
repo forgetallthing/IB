@@ -46,16 +46,25 @@ router.beforeEach((to) => {
   return true;
 });
 
-// 全站 http(s) 链接统一用新标签页打开（含 Vditor 渲染出的链接）
+// 全站链接统一处理：
+// 1) http(s) 外链（含 Vditor 渲染出的链接）用新标签页打开
+// 2) 渲染内容里的站内路径链接（如面经关联的 /questions/:id）走 SPA 跳转，避免整页刷新丢保活状态
 document.addEventListener(
   'click',
   (event) => {
     const anchor = (event.target as HTMLElement | null)?.closest?.('a');
     if (!anchor) return;
     const href = anchor.getAttribute('href') ?? '';
-    if (!/^https?:\/\//i.test(href)) return;
-    anchor.setAttribute('target', '_blank');
-    anchor.setAttribute('rel', 'noopener noreferrer');
+    if (/^(https?:)?\/\//i.test(href)) {
+      anchor.setAttribute('target', '_blank');
+      anchor.setAttribute('rel', 'noopener noreferrer');
+      return;
+    }
+    if (!href.startsWith('/')) return;
+    const e = event as MouseEvent;
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    router.push(href);
   },
   true,
 );

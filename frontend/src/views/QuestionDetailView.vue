@@ -6,6 +6,10 @@ import 'vditor/dist/index.css';
 import { request } from '../api';
 import { useToast } from '../composables/useToast';
 
+// 详情页在 KeepAlive 中按 path 独立实例保活（App.vue keepAliveNames + isDetailPath key），
+// 滚动位置随 DOM 一起保留，无需手动记忆恢复
+defineOptions({ name: 'QuestionDetailView' });
+
 interface QuestionItem {
   id: string;
   title: string;
@@ -150,6 +154,18 @@ onMounted(loadDetail);
 .content :deep(img) {
   max-width: 100%;
   border-radius: 8px;
+}
+
+/* 站内关联链接（如面经关联题）用主题色区分于普通文本与外部链接 */
+.content :deep(a[href^='/']) {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.35);
+}
+
+.content :deep(a[href^='/']:hover) {
+  color: #0f766e;
+  border-bottom-color: rgba(15, 118, 110, 0.7);
 }
 
 .series-badge {
