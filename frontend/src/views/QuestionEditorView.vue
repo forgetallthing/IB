@@ -261,6 +261,12 @@ async function onTypeChange() {
   }
 }
 
+// 返回来源页（列表/详情/系列目录），直接打开编辑器时兜底回笔记中心
+function backToSource() {
+  if (typeof window.history.state?.back === 'string') router.back();
+  else router.push('/questions');
+}
+
 async function save() {
   if (!form.title.trim() || !form.content.trim()) {
     fail('请填写标题和内容');
@@ -352,8 +358,8 @@ onBeforeUnmount(() => {
         <p class="subtitle">编辑标题、正文、标签、难度和可见性。</p>
       </div>
       <div class="header-actions">
+        <button type="button" class="secondary" @click="backToSource">返回</button>
         <button type="button" class="secondary" @click="analyze" :disabled="analyzing">{{ analyzing ? '分析中…' : 'AI 辅助' }}</button>
-        <button type="button" class="secondary" @click="router.push('/questions')">去笔记中心</button>
         <button type="button" @click="save" :disabled="saving">{{ saving ? '保存中…' : '保存笔记' }}</button>
       </div>
     </header>
@@ -489,10 +495,13 @@ onBeforeUnmount(() => {
   background: #e3eef3;
 }
 
+/* 三组撑满收窄后的容器、剩余空白平分：容器缩 200px 使每个组间距约减 100px（157→57） */
 .choice-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px 24px;
+  max-width: calc(100% - 200px);
 }
 
 .content-field {
@@ -525,7 +534,9 @@ onBeforeUnmount(() => {
 
 @media (max-width: 700px) {
   .choice-grid {
-    grid-template-columns: 1fr;
+    justify-content: flex-start;
+    gap: 16px 32px;
+    max-width: 100%;
   }
 }
 </style>

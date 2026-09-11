@@ -395,7 +395,6 @@ onActivated(() => {
             >
               <span class="order-no">{{ ai + 1 }}</span>
               <span class="article-title">{{ a.title }}</span>
-              <span class="pill visibility-pill">{{ a.visibility === 'public' ? '公开' : '私有' }}</span>
               <button
                 v-if="s.canManage"
                 type="button"
@@ -479,12 +478,14 @@ onActivated(() => {
   margin-top: 16px;
   padding: 10px 12px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   align-content: start;
 }
 
 .series-node {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .series-row {
@@ -649,12 +650,6 @@ onActivated(() => {
   white-space: nowrap;
 }
 
-.visibility-pill {
-  flex-shrink: 0;
-  font-size: 12px;
-  padding: 2px 10px;
-}
-
 .text-btn {
   padding: 2px 4px;
   background: none;
@@ -806,6 +801,43 @@ onActivated(() => {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* 移动端适配：隐藏简介让标题占满、减小缩进与内边距，避免横向溢出 */
+@media (max-width: 640px) {
+  .tree {
+    padding: 8px;
+  }
+
+  .series-row {
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .series-desc {
+    display: none;
+  }
+
+  .series-title {
+    flex: 1;
+  }
+
+  .article-rows {
+    padding-left: 18px;
+  }
+
+  .article-row {
+    gap: 8px;
+    padding: 9px 8px;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-card {
+    padding: 18px 16px;
   }
 }
 </style>

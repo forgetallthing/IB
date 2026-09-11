@@ -55,9 +55,9 @@ onMounted(loadDetail);
 <template>
   <section class="page">
     <div class="topbar">
-      <button class="secondary" type="button" @click="backToList">返回列表</button>
-      <div v-if="item" class="actions">
-        <button class="secondary" type="button" @click="router.push(`/questions/edit?id=${item.id}`)">编辑</button>
+      <div class="actions">
+        <button class="secondary" type="button" @click="backToList">返回列表</button>
+        <button v-if="item" class="secondary" type="button" @click="router.push(`/questions/edit?id=${item.id}`)">编辑</button>
       </div>
     </div>
 
@@ -99,6 +99,11 @@ onMounted(loadDetail);
   flex-wrap: wrap;
 }
 
+/* 按钮组统一靠右：返回在按钮组最左（与编辑页一致） */
+.topbar {
+  justify-content: flex-end;
+}
+
 .detail-head {
   display: flex;
   justify-content: space-between;
@@ -112,9 +117,27 @@ onMounted(loadDetail);
   letter-spacing: -0.01em;
 }
 
+/* 难度徽标不被标题挤压，文字保持一行 */
+.detail-head .pill {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.tag-row {
+  margin-top: 12px;
+}
+
 .content {
   margin-top: 8px;
   line-height: 1.8;
+  /* 行内代码/链接中的超长 URL 允许任意断行，避免撑出页面横向区域 */
+  overflow-wrap: anywhere;
+}
+
+/* 代码块内部横向滚动，不把页面撑出横向溢出 */
+.content :deep(pre) {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .content :deep(img) {

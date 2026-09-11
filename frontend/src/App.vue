@@ -18,7 +18,6 @@
         <RouterLink to="/dashboard" @click="closeMenu">数据看板</RouterLink>
         <RouterLink to="/questions" @click="closeMenu">笔记中心</RouterLink>
         <RouterLink to="/quiz" @click="closeMenu">每日回想</RouterLink>
-        <RouterLink to="/questions/edit" @click="closeMenu">笔记编辑</RouterLink>
         <RouterLink to="/series" @click="closeMenu">系列笔记</RouterLink>
         <RouterLink to="/settings" @click="closeMenu">设置</RouterLink>
       </nav>

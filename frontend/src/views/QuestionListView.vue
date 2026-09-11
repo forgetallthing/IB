@@ -114,7 +114,24 @@ function setContentEl(id: string, el: unknown) {
   contentEls.value[id] = (el as HTMLDivElement) ?? null;
 }
 
-async function toggleExpand(id: string) {
+// 头部按下位置：用于判断 click 是否由拖动（划选）结束产生
+const headDownPoint = { x: 0, y: 0 };
+
+function onHeadMousedown(e: MouseEvent) {
+  headDownPoint.x = e.clientX;
+  headDownPoint.y = e.clientY;
+}
+
+async function toggleExpand(id: string, e?: MouseEvent) {
+  // 守卫一：存在非折叠文本选区（划选标题、双击选词）时不切换
+  const sel = window.getSelection();
+  if (sel && !sel.isCollapsed) return;
+  // 守卫二：click 起点与 mousedown 落点相距超过 6px 视为拖动划选（部分场景选区已在 click 前被折叠，选区守卫可能漏判）
+  if (e) {
+    const dx = e.clientX - headDownPoint.x;
+    const dy = e.clientY - headDownPoint.y;
+    if (dx * dx + dy * dy > 36) return;
+  }
   expanded.value[id] = !expanded.value[id];
   if (!expanded.value[id] || rendered.value[id]) return;
   // 展开时才用 Vditor 渲染内容（懒渲染），代码块带语法高亮
@@ -278,35 +295,41 @@ watch([query, difficulty, visibility, type, tag], () => {
 
     <div class="list">
       <article v-for="item in items" :key="item.id" class="card">
-        <button type="button" class="card-head" :aria-expanded="isExpanded(item.id)" @click="toggleExpand(item.id)">
-          <span class="chevron" :class="{ open: isExpanded(item.id) }">▾</span>
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div class="md-title" v-html="item.titleHtml"></div>
-          <span class="head-pills">
-            <span v-for="tagName in item.tags" :key="tagName" class="tag">
-              <i v-if="tagColorMap[tagName]" class="tag-dot" :style="{ backgroundColor: tagColorMap[tagName] }"></i>{{ tagName }}
+        <!-- 头部区域（含卡片内边距）任意位置可点击展开/收起；编辑/删除按钮与正文内容除外 -->
+        <div class="card-top" @mousedown="onHeadMousedown" @click="toggleExpand(item.id, $event)">
+          <button type="button" class="card-head" :aria-expanded="isExpanded(item.id)" @click.stop="toggleExpand(item.id, $event)">
+            <span class="chevron" :class="{ open: isExpanded(item.id) }">▾</span>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div class="md-title" v-html="item.titleHtml"></div>
+            <span class="head-pills">
+              <span v-for="tagName in item.tags" :key="tagName" class="tag">
+                <i v-if="tagColorMap[tagName]" class="tag-dot" :style="{ backgroundColor: tagColorMap[tagName] }"></i>{{ tagName }}
+              </span>
+              <span class="pill" :class="`difficulty-${item.difficulty}`">{{ difficultyLabels[item.difficulty] }}</span>
             </span>
-            <span class="pill" :class="`difficulty-${item.difficulty}`">{{ difficultyLabels[item.difficulty] }}</span>
-          </span>
-        </button>
+          </button>
 
-        <div class="meta-row">
-          <p class="meta">
-            {{ item.creatorName }}
-            <span v-if="isMine(item)" class="mine-badge">我的</span>
-            · {{ item.visibility === 'public' ? '公开' : '私有' }}
-          </p>
-          <div v-if="canMaintain(item) && isExpanded(item.id)" class="card-actions">
-            <button type="button" class="text-btn" @click="editQuestion(item.id)">编辑</button>
-            <span class="sep">·</span>
-            <button type="button" class="text-btn danger-text" @click="deleteQuestion(item.id)">删除</button>
+          <div class="meta-row">
+            <p class="meta">
+              {{ item.creatorName }}
+              <span v-if="isMine(item)" class="mine-badge">我的</span>
+              · {{ item.visibility === 'public' ? '公开' : '私有' }}
+            </p>
+            <!-- 按钮常驻占位、折叠时仅视觉隐藏：避免展开/收起瞬间行高突变导致 meta 行抖动 -->
+            <div v-if="canMaintain(item)" class="card-actions" :class="{ 'actions-hidden': !isExpanded(item.id) }" @click.stop>
+              <button type="button" class="text-btn" @click="editQuestion(item.id)">编辑</button>
+              <span class="sep">·</span>
+              <button type="button" class="text-btn danger-text" @click="deleteQuestion(item.id)">删除</button>
+            </div>
           </div>
         </div>
 
         <div class="collapse" :class="{ open: isExpanded(item.id) }">
           <div class="collapse-inner">
-            <div class="md-content" :ref="(el) => setContentEl(item.id, el)"></div>
-            <p v-if="!canMaintain(item)" class="maintain-hint">仅创建者或管理员可维护此笔记</p>
+            <div class="collapse-body">
+              <div class="md-content" :ref="(el) => setContentEl(item.id, el)"></div>
+              <p v-if="!canMaintain(item)" class="maintain-hint">仅创建者或管理员可维护此笔记</p>
+            </div>
           </div>
         </div>
       </article>
@@ -354,11 +377,20 @@ watch([query, difficulty, visibility, type, tag], () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 22px 24px;
+  /* 底部留白 = 间隙 12px + padding-bottom 6px + meta 行框自带半行距 ≈ 顶部 23px，上下对称 */
+  padding: 22px 24px 6px;
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--line-soft);
   box-shadow: var(--shadow-card);
+}
+
+/* 仅头部可点击：负 margin 只扩上/左/右三边，把点击区延伸到卡片边缘；
+   底边不外扩，避免压到正文顶部导致点正文边缘被误判为头部 */
+.card-top {
+  margin: -22px -24px 0;
+  padding: 22px 24px 0;
+  cursor: pointer;
 }
 
 .card-head {
@@ -419,6 +451,13 @@ watch([query, difficulty, visibility, type, tag], () => {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  /* 标题可划选复制：文本光标提示可选中；button 内默认不可选，需显式放开 */
+  user-select: text;
+  cursor: text;
+}
+
+.md-title :deep(*) {
+  user-select: text;
 }
 
 .md-title :deep(p) {
@@ -438,6 +477,11 @@ watch([query, difficulty, visibility, type, tag], () => {
 
 .collapse-inner {
   overflow: hidden;
+}
+
+/* 展开内容的底部留白放在裁剪层内层：折叠时随内容一起被裁掉，不占卡片空间 */
+.collapse-body {
+  padding-bottom: 12px;
 }
 
 .md-content {
@@ -481,7 +525,8 @@ watch([query, difficulty, visibility, type, tag], () => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 2px 0;
+  /* 14px = 原卡片 grid gap 12px + 原 margin 2px，保持标题行与 meta 行的原有间距 */
+  margin: 14px 0 2px;
 }
 
 .meta {
@@ -495,6 +540,11 @@ watch([query, difficulty, visibility, type, tag], () => {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+
+/* 折叠时操作按钮仅视觉隐藏：visibility 不响应点击，且保持行高不变 */
+.card-actions.actions-hidden {
+  visibility: hidden;
 }
 
 .text-btn {

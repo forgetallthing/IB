@@ -574,9 +574,11 @@ onBeforeUnmount(() => {
 
 .md-content {
   flex: 1;
+  min-width: 0;
   color: #4a5b6a;
   font-size: 14px;
   line-height: 1.75;
+  overflow-wrap: anywhere;
 }
 
 .md-content :deep(p) {
