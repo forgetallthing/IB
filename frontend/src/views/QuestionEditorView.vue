@@ -441,11 +441,14 @@ onBeforeUnmount(() => {
 
 .editor-panel {
   display: grid;
+  /* 封顶为容器宽，防止内部宽内容（vditor 工具栏 max-content 约 1019px）撑破面板 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
 .field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -512,6 +515,28 @@ onBeforeUnmount(() => {
 .content-editor :deep(.vditor) {
   border-radius: var(--radius-md);
   border-color: var(--line);
+}
+
+/* vditor 工具栏默认不换行，min-content 约 1019px，窄窗口会把 grid 链条撑破冒出面板；
+   vditor 内部各层也是 grid/flex item（min-width:auto），需一并放开才能收缩 */
+.title-editor :deep(.vditor),
+.content-editor :deep(.vditor),
+.title-editor :deep(.vditor-content),
+.content-editor :deep(.vditor-content),
+.title-editor :deep(.vditor-ir),
+.content-editor :deep(.vditor-ir) {
+  min-width: 0;
+}
+
+.title-editor :deep(.vditor-toolbar),
+.content-editor :deep(.vditor-toolbar) {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.editor-panel,
+.field {
+  min-width: 0;
 }
 
 .ai-box {

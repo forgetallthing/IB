@@ -45,6 +45,8 @@ body {
 
 .page {
   display: grid;
+  /* 封顶为容器宽：auto 轨道 max 是 max-content，内部宽内容（如 vditor 工具栏）会把整页撑出横向溢出 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   /* 注意：不能加 both/forwards 填充——填充会让动画常驻应用，
      Chrome 会把带 transform 动画的元素当成 position:fixed 后代的包含块，

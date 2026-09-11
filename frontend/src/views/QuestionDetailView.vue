@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { marked } from 'marked';
+import Vditor from 'vditor';
+import 'vditor/dist/index.css';
 import { request } from '../api';
 import { useToast } from '../composables/useToast';
-
-marked.setOptions({ gfm: true, breaks: true });
 
 interface QuestionItem {
   id: string;
@@ -27,15 +26,24 @@ const router = useRouter();
 const loading = ref(false);
 const { fail } = useToast();
 const item = ref<QuestionItem | null>(null);
+const contentEl = ref<HTMLDivElement | null>(null);
 
 const difficultyLabels = { easy: '简单', medium: '中等', hard: '困难' } as const;
-
-const contentHtml = computed(() => (item.value ? (marked.parse(item.value.content || '', { async: false }) as string) : ''));
 
 async function loadDetail() {
   loading.value = true;
   try {
     item.value = await request<QuestionItem>(`/questions/${route.params.id}`);
+    await nextTick();
+    if (contentEl.value && item.value) {
+      // 与列表/回想页一致，用 Vditor.preview 渲染：本地 /vditor 资源 + hljs 代码高亮
+      Vditor.preview(contentEl.value, item.value.content || '', {
+        lang: 'zh_CN',
+        mode: 'light',
+        cdn: '/vditor',
+        hljs: { style: 'github', lineNumber: false },
+      });
+    }
   } catch (error) {
     fail(error instanceof Error ? error.message : '加载详情失败');
   } finally {
@@ -83,8 +91,7 @@ onMounted(loadDetail);
         <span v-for="tag in item.tags" :key="tag" class="tag">#{{ tag }}</span>
       </div>
 
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div class="content" v-html="contentHtml"></div>
+      <div ref="contentEl" class="content"></div>
     </article>
   </section>
 </template>
