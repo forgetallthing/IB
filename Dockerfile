@@ -22,8 +22,15 @@ RUN npm install --omit=dev --workspace @ib/backend
 
 RUN npm install -g pm2@5
 
-# 从 mongo:7 官方镜像提取 mongodump，供「整库备份」接口在容器内直接调用
-COPY --from=mongo:7 /usr/bin/mongodump /usr/local/bin/mongodump
+# 安装 MongoDB Database Tools（mongodump），供「整库备份」接口在容器内直接调用。
+# 勿改回从 mongo:7 复制单文件：该二进制动态链接 ubuntu(jammy) 的共享库，slim 镜像
+# 缺库时动态链接器直接以退出码 127 失败；官方 deb 与 bookworm 匹配，apt 自动补齐依赖
+ADD https://fastdl.mongodb.org/tools/db/mongodb-database-tools-debian12-x86_64-100.18.0.deb /tmp/mongodb-database-tools.deb
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends /tmp/mongodb-database-tools.deb \
+ && rm -f /tmp/mongodb-database-tools.deb \
+ && rm -rf /var/lib/apt/lists/* \
+ && mongodump --version
 
 COPY --from=build /app/backend/dist backend/dist
 
