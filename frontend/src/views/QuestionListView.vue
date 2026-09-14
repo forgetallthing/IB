@@ -154,7 +154,9 @@ function isExpanded(id: string) {
 }
 
 function mdTitleHtml(md: string) {
-  return marked.parse(md || '', { async: false }) as string;
+  // 标题按纯文本转义后再解析，防止 title 里的 <tag> 被当成真 HTML 吞字
+  const escaped = (md || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return marked.parse(escaped, { async: false }) as string;
 }
 
 async function loadTagOptions() {

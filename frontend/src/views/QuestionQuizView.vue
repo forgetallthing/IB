@@ -200,7 +200,8 @@ async function drawQuestion(excludeId?: string) {
     showAnswer.value = false;
     showAiPanel.value = false;
     aiAnalysis.value = '';
-    titleHtml.value = marked.parse(item.title || '', { async: false }) as string;
+    // 标题按纯文本转义后再解析，防止 title 里的 <tag> 被当成真 HTML 吞字
+    titleHtml.value = marked.parse((item.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;'), { async: false }) as string;
   } catch (error) {
     fail(error instanceof Error ? error.message : '抽题失败');
   } finally {
