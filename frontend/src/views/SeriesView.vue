@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onActivated, reactive, ref } from 'vue';
+import { computed, onActivated, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { request } from '../api';
+import PageToolbar from '../components/PageToolbar.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
@@ -166,6 +167,21 @@ async function onArticleDrop(s: SeriesItem, index: number) {
   }
 }
 
+// ---------- 系列行操作菜单（☰ 图标下拉） ----------
+const menuOpenId = ref('');
+
+function toggleMenu(s: SeriesItem) {
+  menuOpenId.value = menuOpenId.value === s.id ? '' : s.id;
+}
+
+function closeMenu() {
+  menuOpenId.value = '';
+}
+
+// 点击菜单外任意区域收起（菜单容器上已 stop 冒泡，不会误触发）
+onMounted(() => document.addEventListener('click', closeMenu));
+onBeforeUnmount(() => document.removeEventListener('click', closeMenu));
+
 // ---------- 新建系列 ----------
 const createOpen = ref(false);
 const creating = ref(false);
@@ -207,6 +223,7 @@ const renameId = ref('');
 const renameForm = reactive({ title: '', description: '' });
 
 function openRename(s: SeriesItem) {
+  closeMenu();
   renameId.value = s.id;
   renameForm.title = s.title;
   renameForm.description = s.description;
@@ -233,6 +250,7 @@ async function submitRename() {
 }
 
 async function removeSeries(s: SeriesItem) {
+  closeMenu();
   const ok = await showConfirm({
     title: '删除系列',
     message: `确定删除系列「${s.title}」吗？系列内的文章不会被删除，仅移出该系列。`,
@@ -268,6 +286,7 @@ const filteredCandidates = computed(() => {
 
 // 候选 = 文章类型 + 未入任何系列 + 自己创建（admin 不限）
 async function openAdd(s: SeriesItem) {
+  closeMenu();
   addSeries.value = s;
   addOpen.value = true;
   pickedIds.value = [];
@@ -338,7 +357,7 @@ onActivated(() => {
 
 <template>
   <section class="page">
-    <header class="page-header">
+    <PageToolbar>
       <div>
         <h1>系列笔记</h1>
         <p class="subtitle">目录形式组织系列与文章：点击系列展开目录，同级拖拽调整顺序。</p>
@@ -346,7 +365,7 @@ onActivated(() => {
       <div class="header-actions">
         <button type="button" @click="openCreate">新建系列</button>
       </div>
-    </header>
+    </PageToolbar>
 
     <p v-if="loading && !seriesList.length" class="loading">加载中…</p>
     <p v-else-if="!seriesList.length" class="empty-hint panel">还没有系列，点击右上角「新建系列」创建一个</p>
@@ -370,9 +389,23 @@ onActivated(() => {
           <span class="series-meta">{{ s.articleCount }} 篇</span>
           <i v-if="s.canManage" class="mine-badge">我的</i>
           <span v-if="s.canManage" class="row-actions" @click.stop>
-            <button type="button" class="text-btn" @click="openAdd(s)">添加</button>
-            <button type="button" class="text-btn" @click="openRename(s)">改名</button>
-            <button type="button" class="text-btn danger-text" @click="removeSeries(s)">删除</button>
+            <button
+              type="button"
+              class="icon-btn"
+              :class="{ active: menuOpenId === s.id }"
+              aria-label="系列操作"
+              :aria-expanded="menuOpenId === s.id"
+              @click="toggleMenu(s)"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 4.5H13.5M2.5 8H13.5M2.5 11.5H13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+            </button>
+            <div v-if="menuOpenId === s.id" class="series-menu">
+              <button type="button" class="menu-item" @click="openAdd(s)">添加文章</button>
+              <button type="button" class="menu-item" @click="openRename(s)">改名 / 简介</button>
+              <button type="button" class="menu-item danger-text" @click="removeSeries(s)">删除系列</button>
+            </div>
           </span>
         </div>
 
@@ -398,10 +431,14 @@ onActivated(() => {
               <button
                 v-if="s.canManage"
                 type="button"
-                class="text-btn danger-text"
+                class="icon-btn remove-btn"
+                aria-label="移出文章"
+                title="移出系列"
                 @click.stop="removeArticle(s, a)"
               >
-                移出
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 7H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
               </button>
             </div>
           </template>
@@ -570,11 +607,115 @@ onActivated(() => {
 }
 
 .row-actions {
+  position: relative;
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+}
+
+/* 图标按钮（☰ 操作菜单 / − 移出）：无系统默认外观，hover 淡青底 */
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--muted);
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: rgba(13, 148, 136, 0.1);
+  color: var(--accent);
+  transform: none;
+  box-shadow: none;
+}
+
+.icon-btn.active {
+  background: rgba(13, 148, 136, 0.12);
+  color: var(--accent);
+}
+
+/* 移出按钮：默认更淡，hover 行时显现危险色 */
+.icon-btn.remove-btn {
+  width: 26px;
+  height: 26px;
+  opacity: 0.55;
+}
+
+.article-row:hover .icon-btn.remove-btn {
+  opacity: 1;
+}
+
+.icon-btn.remove-btn:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.09);
+  color: var(--danger);
+}
+
+/* ☰ 下拉操作菜单 */
+.series-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 128px;
+  padding: 5px;
+  display: grid;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lift);
+  animation: menu-in 0.14s ease;
+}
+
+.menu-item {
+  padding: 7px 12px;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.menu-item:hover:not(:disabled) {
+  background: var(--surface-tint);
+  transform: none;
+  box-shadow: none;
+}
+
+.menu-item.danger-text {
+  color: var(--danger);
+}
+
+.menu-item.danger-text:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* 无操作按钮时把 meta 推到行尾 */

@@ -9,6 +9,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
   app.get('/api/questions', async (request) => {
     const query = request.query as {
       q?: string;
+      qf?: 'title' | 'content';
       tags?: string | string[];
       difficulty?: 'easy' | 'medium' | 'hard' | Array<'easy' | 'medium' | 'hard'>;
       creatorId?: string;
@@ -57,10 +58,14 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       filter.$and = [visibilityClause];
     }
     if (query.q) {
-      filter.$or = [
-        { title: { $regex: query.q, $options: 'i' } },
-        { content: { $regex: query.q, $options: 'i' } },
-      ];
+      // qf 限定搜索范围：title=仅标题、content=仅正文，缺省搜全部
+      const field = query.qf === 'title' || query.qf === 'content' ? query.qf : null;
+      filter.$or = field
+        ? [{ [field]: { $regex: query.q, $options: 'i' } }]
+        : [
+            { title: { $regex: query.q, $options: 'i' } },
+            { content: { $regex: query.q, $options: 'i' } },
+          ];
     }
     if (query.difficulty) {
       const difficulties = Array.isArray(query.difficulty) ? query.difficulty : [query.difficulty];

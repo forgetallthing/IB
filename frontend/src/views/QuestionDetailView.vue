@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
+import PageToolbar from '../components/PageToolbar.vue';
 import { useToast } from '../composables/useToast';
 
 // 详情页在 KeepAlive 中按 path 独立实例保活（App.vue keepAliveNames + isDetailPath key），
@@ -66,12 +67,17 @@ onMounted(loadDetail);
 
 <template>
   <section class="page">
-    <div class="topbar">
-      <div class="actions">
+    <!-- 页头上移至全站固定工具栏：左标题/说明、右操作按钮 -->
+    <PageToolbar>
+      <div>
+        <h1>笔记详情</h1>
+        <p class="subtitle">{{ item?.title }}</p>
+      </div>
+      <div class="header-actions">
         <button class="secondary" type="button" @click="backToList">返回列表</button>
         <button v-if="item" class="secondary" type="button" @click="router.push(`/questions/edit?id=${item.id}`)">编辑</button>
       </div>
-    </div>
+    </PageToolbar>
 
     <p v-if="loading" class="loading">详情加载中…</p>
 
@@ -101,20 +107,6 @@ onMounted(loadDetail);
 </template>
 
 <style scoped>
-.topbar,
-.actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* 按钮组统一靠右：返回在按钮组最左（与编辑页一致） */
-.topbar {
-  justify-content: flex-end;
-}
-
 .detail-head {
   display: flex;
   justify-content: space-between;

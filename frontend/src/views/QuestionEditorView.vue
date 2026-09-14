@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
+import PageToolbar from '../components/PageToolbar.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
@@ -352,17 +353,23 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page">
-    <header class="page-header">
+    <PageToolbar>
       <div>
         <h1>笔记编辑</h1>
         <p class="subtitle">编辑标题、正文、标签、难度和可见性。</p>
       </div>
       <div class="header-actions">
         <button type="button" class="secondary" @click="backToSource">返回</button>
-        <button type="button" class="secondary" @click="analyze" :disabled="analyzing">{{ analyzing ? '分析中…' : 'AI 辅助' }}</button>
-        <button type="button" @click="save" :disabled="saving">{{ saving ? '保存中…' : '保存笔记' }}</button>
+        <button type="button" class="secondary" @click="analyze" :disabled="analyzing">
+          <span class="btn-full">{{ analyzing ? '分析中…' : 'AI 辅助' }}</span>
+          <span class="btn-mini">{{ analyzing ? '分析中' : 'AI' }}</span>
+        </button>
+        <button type="button" @click="save" :disabled="saving">
+          <span class="btn-full">{{ saving ? '保存中…' : '保存笔记' }}</span>
+          <span class="btn-mini">{{ saving ? '保存中' : '保存' }}</span>
+        </button>
       </div>
-    </header>
+    </PageToolbar>
 
     <p v-if="loading" class="loading">笔记加载中…</p>
 

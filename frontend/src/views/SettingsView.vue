@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { request, requestBlob } from '../api';
+import PageToolbar from '../components/PageToolbar.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
@@ -343,13 +344,13 @@ onMounted(refresh);
 
 <template>
   <section class="page">
-    <header class="page-header">
+    <PageToolbar>
       <div>
         <h1>设置</h1>
         <p class="subtitle">{{ isAdmin ? '系统设置与管理功能。' : '系统设置。' }}</p>
       </div>
       <button type="button" @click="refresh" :disabled="loading">{{ loading ? '刷新中…' : '刷新' }}</button>
-    </header>
+    </PageToolbar>
 
     <p v-if="loading" class="loading">加载中…</p>
 

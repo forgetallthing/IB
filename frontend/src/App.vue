@@ -24,6 +24,10 @@
     </aside>
 
     <div class="content-shell">
+      <!-- 固定顶部工具栏：各页页头经 PageToolbar Teleport 进 #page-toolbar-slot，不参与滚动 -->
+      <div class="page-toolbar-row">
+        <div id="page-toolbar-slot"></div>
+      </div>
       <main ref="mainEl" class="app-main">
         <RouterView v-slot="{ Component }">
           <!-- KeepAlive 内不允许注释节点：详情页按 path 独立实例（key），每篇笔记一个保活实例 -->
@@ -177,6 +181,25 @@ watch(
   min-width: 0;
   min-height: 0;
   display: grid;
+  /* 第一行固定工具栏（不滚动），第二行滚动内容区 */
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.page-toolbar-row {
+  height: var(--toolbar-h);
+  position: relative;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(240, 248, 250, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#page-toolbar-slot {
+  width: 100%;
+  display: flex;
 }
 
 .brand {
@@ -259,7 +282,8 @@ h1 {
 .app-main {
   min-height: 0;
   overflow: auto;
-  padding: 24px 32px 40px;
+  /* 顶部 20px：工具栏行已承担分隔（60+20+40=120，见 Dashboard/Quiz 的 calc 公式） */
+  padding: 20px 32px 40px;
 }
 
 .back-top {

@@ -5,6 +5,7 @@ import { marked } from 'marked';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
+import PageToolbar from '../components/PageToolbar.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
@@ -33,6 +34,13 @@ const auth = useAuthStore();
 const { notice, fail } = useToast();
 const loading = ref(false);
 const query = ref('');
+// 搜索范围：all=标题+正文（默认）、title=仅标题、content=仅正文
+const searchField = ref<'all' | 'title' | 'content'>('all');
+const searchFieldOptions = [
+  { value: 'all', label: '全部' },
+  { value: 'title', label: '标题' },
+  { value: 'content', label: '正文' },
+] as const;
 const difficulty = ref<string[]>([]);
 const visibility = ref<string[]>([]);
 const type = ref<string[]>([]);
@@ -62,7 +70,7 @@ function persistFilters() {
   try {
     localStorage.setItem(
       FILTER_STORAGE_KEY,
-      JSON.stringify({ difficulty: difficulty.value, visibility: visibility.value, type: type.value, tag: tag.value }),
+      JSON.stringify({ searchField: searchField.value, difficulty: difficulty.value, visibility: visibility.value, type: type.value, tag: tag.value }),
     );
   } catch {
     /* 忽略存储失败（如隐私模式） */
@@ -72,6 +80,8 @@ function persistFilters() {
 // 恢复上次勾选
 {
   const stored = loadStoredFilters();
+  const storedField = stored.searchField;
+  if (storedField === 'title' || storedField === 'content' || storedField === 'all') searchField.value = storedField;
   difficulty.value = asStringArray(stored.difficulty);
   visibility.value = asStringArray(stored.visibility);
   type.value = asStringArray(stored.type);
@@ -174,6 +184,11 @@ const tagColorMap = computed<Record<string, string>>(() =>
   Object.fromEntries(tagOptions.value.map((option) => [option.value, option.color ?? ''])),
 );
 
+// 占位文案跟随搜索范围
+const searchPlaceholder = computed(() =>
+  searchField.value === 'title' ? '搜索标题' : searchField.value === 'content' ? '搜索正文内容' : '搜索标题或内容',
+);
+
 async function loadItems(reset = true) {
   // 追加模式下避免重复请求；重置模式允许打断旧请求（用序号丢弃过期响应）
   if (!reset && (loading.value || !hasMore.value)) return;
@@ -185,7 +200,10 @@ async function loadItems(reset = true) {
     const params = new URLSearchParams();
     params.set('page', String(page.value));
     params.set('limit', String(PAGE_SIZE));
-    if (query.value.trim()) params.set('q', query.value.trim());
+    if (query.value.trim()) {
+      params.set('q', query.value.trim());
+      if (searchField.value !== 'all') params.set('qf', searchField.value);
+    }
     difficulty.value.forEach((value) => params.append('difficulty', value));
     visibility.value.forEach((value) => params.append('visibility', value));
     type.value.forEach((value) => params.append('type', value));
@@ -264,7 +282,7 @@ onBeforeUnmount(() => {
   observer = null;
 });
 
-watch([query, difficulty, visibility, type, tag], () => {
+watch([query, searchField, difficulty, visibility, type, tag], () => {
   persistFilters();
   loadItems(true);
 });
@@ -272,7 +290,7 @@ watch([query, difficulty, visibility, type, tag], () => {
 
 <template>
   <section class="page">
-    <header class="page-header">
+    <PageToolbar>
       <div>
         <h1>笔记中心</h1>
         <p class="subtitle">搜索、筛选和管理笔记，<template v-if="total">共 {{ total }} 条</template></p>
@@ -280,12 +298,36 @@ watch([query, difficulty, visibility, type, tag], () => {
       <div class="header-actions">
         <button type="button" @click="editQuestion()">新建笔记</button>
       </div>
-    </header>
+    </PageToolbar>
 
     <section class="filter-panel">
       <div class="filter-row">
-        <input v-model="query" type="search" placeholder="搜索标题或内容" />
-        <button type="button" class="secondary" @click="loadItems(true)">刷新</button>
+        <div class="search-scope" role="group" aria-label="搜索范围">
+          <button
+            v-for="opt in searchFieldOptions"
+            :key="opt.value"
+            type="button"
+            class="scope-btn"
+            :class="{ active: searchField === opt.value }"
+            :aria-pressed="searchField === opt.value"
+            @click="searchField = opt.value"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+        <!-- 移动端专用：窄屏用下拉节省宽度 -->
+        <select v-model="searchField" class="search-field-select" aria-label="搜索范围">
+          <option value="all">全部</option>
+          <option value="title">标题</option>
+          <option value="content">正文</option>
+        </select>
+        <input v-model="query" type="search" :placeholder="searchPlaceholder" />
+        <button type="button" class="secondary refresh-btn" aria-label="刷新" @click="loadItems(true)">
+          <span class="btn-full">刷新</span>
+          <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.61-3.89M13.5 1.5v3h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
       </div>
       <FilterCheckGroup v-model="difficulty" label="难度" :options="difficultyOptions" />
       <FilterCheckGroup v-model="visibility" label="可见性" :options="visibilityOptions" />
@@ -360,6 +402,102 @@ watch([query, difficulty, visibility, type, tag], () => {
   flex: 1;
   min-width: 0;
   background: #f4f8fa;
+}
+
+/* 搜索范围分段控件：连体按钮组，选中项青绿底白字 */
+.search-scope {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #e8f0f4;
+  border: 1px solid var(--line-soft);
+}
+
+.scope-btn {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.scope-btn:hover:not(:disabled) {
+  background: rgba(13, 148, 136, 0.09);
+  color: var(--accent);
+  transform: none;
+  box-shadow: none;
+}
+
+.scope-btn.active,
+.scope-btn.active:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+}
+
+.scope-btn.active:hover:not(:disabled) {
+  background: var(--primary-strong);
+}
+
+.scope-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.35);
+}
+
+/* 移动版范围下拉与刷新图标：桌面隐藏 */
+.search-field-select {
+  display: none;
+}
+
+.refresh-btn {
+  flex-shrink: 0;
+}
+
+.refresh-btn .btn-icon {
+  display: none;
+}
+
+/* 移动端：分段控件换成左侧下拉，刷新变右侧图标按钮，单行排布；整体缩小更紧凑 */
+@media (max-width: 640px) {
+  .search-scope {
+    display: none;
+  }
+
+  .filter-row input,
+  .search-field-select,
+  .refresh-btn {
+    padding: 7px 10px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  .search-field-select {
+    display: block;
+    width: 64px;
+    flex-shrink: 0;
+    padding-right: 8px;
+    background-color: #f4f8fa;
+    background-image: none; /* 去掉下拉箭头 */
+  }
+
+  .refresh-btn {
+    padding: 7px;
+  }
+
+  .refresh-btn .btn-full {
+    display: none;
+  }
+
+  .refresh-btn .btn-icon {
+    display: block;
+  }
 }
 
 .filter-panel > :not(.filter-row) {

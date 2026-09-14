@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
+import PageToolbar from '../components/PageToolbar.vue';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
 import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
@@ -279,7 +280,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page">
-    <header class="page-header">
+    <PageToolbar>
       <div>
         <h1>每日回想</h1>
         <p class="subtitle">随机抽取笔记，先自己回想作答，再对照参考详情。</p>
@@ -289,14 +290,19 @@ onBeforeUnmount(() => {
           筛选<template v-if="activeFilterCount"> · {{ activeFilterCount }}</template>
         </button>
         <button type="button" class="secondary" :disabled="analyzing || !question" @click="runAiReview">
-          {{ analyzing ? 'AI 分析中…' : 'AI 分析' }}
+          <span class="btn-full">{{ analyzing ? 'AI 分析中…' : 'AI 分析' }}</span>
+          <span class="btn-mini">{{ analyzing ? '分析中' : 'AI' }}</span>
         </button>
         <button type="button" class="secondary" :disabled="!question" @click="toggleAnswer">
-          {{ showAnswer ? '隐藏详情' : '显示详情' }}
+          <span class="btn-full">{{ showAnswer ? '隐藏详情' : '显示详情' }}</span>
+          <span class="btn-mini">{{ showAnswer ? '收起' : '详情' }}</span>
         </button>
-        <button type="button" :disabled="loading" @click="nextQuestion">再来一篇</button>
+        <button type="button" :disabled="loading" @click="nextQuestion">
+          <span class="btn-full">再来一篇</span>
+          <span class="btn-mini">下一篇</span>
+        </button>
       </div>
-    </header>
+    </PageToolbar>
 
     <p v-if="loading && !question" class="loading">抽取中…</p>
 
@@ -399,16 +405,15 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* 覆盖全局 .page：整页占满可视高度（扣除 app-main 上下 padding），页面自身不滚动 */
+/* 覆盖全局 .page：整页占满可视高度（扣除工具栏 60 + app-main 上下 padding 20+40），页面自身不滚动 */
 .page {
-  height: calc(100dvh - 64px);
+  height: calc(100dvh - 120px);
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-height: 0;
 }
 
-.page-header,
 .question-card {
   flex-shrink: 0;
 }

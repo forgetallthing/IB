@@ -14,6 +14,8 @@
   --ok: #16a34a;
   --radius-lg: 18px;
   --radius-md: 12px;
+  /* 固定顶部工具栏高度：App.vue 行高与 Dashboard/Quiz 的 calc 公式共用，避免漂移 */
+  --toolbar-h: 60px;
   --shadow-card: 0 10px 28px rgba(15, 42, 58, 0.08), 0 2px 6px rgba(15, 42, 58, 0.05);
   --shadow-lift: 0 16px 36px rgba(15, 42, 58, 0.14);
 }
@@ -106,6 +108,89 @@ body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* ---------- 固定顶部工具栏内的页头 ----------
+   页头经 Teleport 渲染到工具栏行，脱离了 .app-main > * 的 1180px 居中规则，
+   在此恢复与内容列一致的对齐；工具栏行本身仍拉满内容区全宽 */
+
+.page-toolbar-row .page-header {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: 32px;
+  flex-wrap: nowrap;
+}
+
+.page-toolbar-row .page-header h1 {
+  font-size: 20px;
+}
+
+.page-toolbar-row .subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-toolbar-row .header-actions {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* 工具栏按钮紧凑化：为标题留出空间（桌面/移动共用） */
+.page-toolbar-row .header-actions button {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+/* 响应式按钮文案：宽屏用 btn-full 完整文案，窄屏切换为 btn-mini 短文案 */
+.btn-mini {
+  display: none;
+}
+
+@media (max-width: 1120px) {
+  .page-toolbar-row .page-header {
+    padding-inline: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-toolbar-row .subtitle {
+    display: none;
+  }
+
+  /* 标题防挤压：按钮过多时不换行、超长省略 */
+  .page-toolbar-row .page-header > div:first-child {
+    min-width: 0;
+  }
+
+  .page-toolbar-row .page-header h1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .page-toolbar-row .header-actions {
+    gap: 6px;
+  }
+
+  .page-toolbar-row .header-actions button {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .page-toolbar-row .btn-full {
+    display: none;
+  }
+
+  .page-toolbar-row .btn-mini {
+    display: inline;
+  }
 }
 
 .panel,

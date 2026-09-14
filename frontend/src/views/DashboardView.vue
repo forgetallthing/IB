@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { request } from '../api';
+import PageToolbar from '../components/PageToolbar.vue';
 import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
 
@@ -277,17 +278,16 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard">
-    <!-- 欢迎横幅 -->
-    <header class="hero">
-      <div class="hero-deco" aria-hidden="true"></div>
-      <div class="hero-body">
-        <div>
-          <h2>{{ greeting }}，{{ auth.user?.username ?? '同学' }}</h2>
-          <p class="hero-sub">{{ todayText }} · 今天也来回想几道题吧</p>
-        </div>
+    <!-- 页头上移至全站固定工具栏：标题 + 问候副标题 + 开始回想 -->
+    <PageToolbar>
+      <div>
+        <h1>数据看板</h1>
+        <p class="subtitle">{{ greeting }}，{{ auth.user?.username ?? '同学' }} · {{ todayText }}</p>
+      </div>
+      <div class="header-actions">
         <button type="button" class="start-quiz" @click="startQuiz">开始回想</button>
       </div>
-    </header>
+    </PageToolbar>
 
     <p v-if="loading" class="loading">加载中…</p>
 
@@ -476,63 +476,24 @@ onBeforeUnmount(() => {
 <style scoped>
 .dashboard {
   display: grid;
-  /* 行（PC/Pad）：横幅、统计卡随内容自适应；热力图行固定 180px；
-     近 7 天趋势行与我的笔记行按 0.77 : 0.88 弹性分配剩余高度 */
+  /* 行（PC/Pad）：统计卡随内容自适应；热力图行固定 200px；
+     近 7 天趋势行与我的笔记行按 0.77 : 0.88 弹性分配剩余高度
+     （页头已上移至全站固定工具栏，不再占行） */
   grid-template-rows:
-    auto
     auto
     200px
     minmax(0, 0.77fr)
     minmax(0, 0.88fr);
   gap: 12px;
-  /* 固定高度 = 扣除 app-main 上下 padding（24+40）后的可视高度，
+  /* 固定高度 = 扣除固定工具栏 60 + app-main 上下 padding（20+40）后的可视高度，
      让 fr 行正好分配完剩余空间，整页锁定一屏、禁止滚动 */
-  height: calc(100dvh - 64px);
+  height: calc(100dvh - 120px);
   overflow: hidden;
 }
 
-/* 欢迎横幅：浅 teal 渐变 + 柔光装饰圆 */
-.hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid rgba(13, 148, 136, 0.16);
-  background: linear-gradient(120deg, rgba(13, 148, 136, 0.12) 0%, rgba(13, 148, 136, 0.05) 55%, rgba(20, 184, 166, 0.1) 100%);
-}
-
-.hero-deco {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(180px 120px at 88% 20%, rgba(20, 184, 166, 0.22), transparent 70%),
-    radial-gradient(220px 160px at 70% 110%, rgba(13, 148, 136, 0.14), transparent 70%);
-  pointer-events: none;
-}
-
-.hero-body {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 16px 24px;
-}
-
-.hero-body h2 {
-  margin: 0;
-  font-size: 20px;
-  letter-spacing: -0.01em;
-}
-
-.hero-sub {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
+/* 工具栏中的「开始回想」按钮：teal 渐变胶囊 */
 .start-quiz {
-  padding: 11px 24px;
+  padding: 8px 18px;
   border-radius: 999px;
   border: none;
   background: linear-gradient(135deg, #0f766e, #0d9488);
@@ -540,7 +501,7 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.28);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.26);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
