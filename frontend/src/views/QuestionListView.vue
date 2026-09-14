@@ -41,6 +41,26 @@ const searchFieldOptions = [
   { value: 'title', label: '标题' },
   { value: 'content', label: '正文' },
 ] as const;
+
+// 移动端搜索范围自定义小下拉：按钮显示当前值，菜单悬浮在按钮下方，点击外部收起
+const fieldMenuOpen = ref(false);
+const currentFieldLabel = computed(
+  () => searchFieldOptions.find((option) => option.value === searchField.value)?.label ?? '全部',
+);
+
+function toggleFieldMenu() {
+  fieldMenuOpen.value = !fieldMenuOpen.value;
+}
+
+function pickField(value: 'all' | 'title' | 'content') {
+  searchField.value = value;
+  fieldMenuOpen.value = false;
+}
+
+function closeFieldMenu() {
+  fieldMenuOpen.value = false;
+}
+
 const difficulty = ref<string[]>([]);
 const visibility = ref<string[]>([]);
 const type = ref<string[]>([]);
@@ -267,6 +287,8 @@ async function deleteQuestion(id: string) {
 onMounted(() => {
   loadTagOptions().catch(() => {});
   loadItems(true);
+  // 点击下拉外部时收起移动端搜索范围菜单
+  document.addEventListener('click', closeFieldMenu);
   // 滚动到底部自动加载下一页
   observer = new IntersectionObserver(
     (entries) => {
@@ -280,6 +302,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   observer?.disconnect();
   observer = null;
+  document.removeEventListener('click', closeFieldMenu);
 });
 
 watch([query, searchField, difficulty, visibility, type, tag], () => {
@@ -315,12 +338,24 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
             {{ opt.label }}
           </button>
         </div>
-        <!-- 移动端专用：窄屏用下拉节省宽度 -->
-        <select v-model="searchField" class="search-field-select" aria-label="搜索范围">
-          <option value="all">全部</option>
-          <option value="title">标题</option>
-          <option value="content">正文</option>
-        </select>
+        <!-- 移动端专用：窄屏用自定义小下拉（原生 select 选项无法美化） -->
+        <div class="search-field-dropdown">
+          <button type="button" class="field-btn" :aria-expanded="fieldMenuOpen" @click.stop="toggleFieldMenu">
+            {{ currentFieldLabel }}
+          </button>
+          <div v-if="fieldMenuOpen" class="field-menu">
+            <button
+              v-for="opt in searchFieldOptions"
+              :key="opt.value"
+              type="button"
+              class="menu-item"
+              :class="{ active: searchField === opt.value }"
+              @click="pickField(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
         <input v-model="query" type="search" :placeholder="searchPlaceholder" />
         <button type="button" class="secondary refresh-btn" aria-label="刷新" @click="loadItems(true)">
           <span class="btn-full">刷新</span>
@@ -451,9 +486,70 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.35);
 }
 
-/* 移动版范围下拉与刷新图标：桌面隐藏 */
-.search-field-select {
+/* 移动端搜索范围小下拉（桌面隐藏）：窄按钮 + 悬浮菜单 */
+.search-field-dropdown {
   display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.field-btn {
+  padding: 7px 12px;
+  background: var(--surface-tint);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.field-btn:hover:not(:disabled),
+.field-btn:focus-visible {
+  background: #e0eaf0;
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+
+.field-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 88px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lift);
+}
+
+.field-menu .menu-item {
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  box-shadow: none;
+}
+
+.field-menu .menu-item:hover:not(:disabled) {
+  background: rgba(13, 148, 136, 0.09);
+  color: var(--accent);
+  transform: none;
+  box-shadow: none;
+}
+
+.field-menu .menu-item.active,
+.field-menu .menu-item.active:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
 }
 
 .refresh-btn {
@@ -464,27 +560,21 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
   display: none;
 }
 
-/* 移动端：分段控件换成左侧下拉，刷新变右侧图标按钮，单行排布；整体缩小更紧凑 */
+/* 移动端：范围用左侧小下拉（菜单悬浮按钮下方）；搜索行整体缩小更紧凑 */
 @media (max-width: 640px) {
   .search-scope {
     display: none;
   }
 
+  .search-field-dropdown {
+    display: block;
+  }
+
   .filter-row input,
-  .search-field-select,
   .refresh-btn {
     padding: 7px 10px;
     font-size: 13px;
     border-radius: 10px;
-  }
-
-  .search-field-select {
-    display: block;
-    width: 64px;
-    flex-shrink: 0;
-    padding-right: 8px;
-    background-color: #f4f8fa;
-    background-image: none; /* 去掉下拉箭头 */
   }
 
   .refresh-btn {

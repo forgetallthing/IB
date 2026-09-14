@@ -4,7 +4,10 @@
   </div>
 
   <div v-else class="app-shell">
-    <button class="mobile-menu-button" type="button" @click="menuOpen = !menuOpen">菜单</button>
+    <!-- 移动端抽屉蒙版：点击收起菜单 -->
+    <Transition name="mask-fade">
+      <div v-if="menuOpen" class="sidebar-mask" @click="closeMenu"></div>
+    </Transition>
 
     <aside :class="['sidebar', { open: menuOpen }]">
       <div class="brand">
@@ -27,6 +30,18 @@
       <!-- 固定顶部工具栏：各页页头经 PageToolbar Teleport 进 #page-toolbar-slot，不参与滚动 -->
       <div class="page-toolbar-row">
         <div id="page-toolbar-slot"></div>
+        <!-- 移动端：全局导航菜单收进工具栏最右 ☰ -->
+        <button
+          class="toolbar-menu-btn"
+          type="button"
+          aria-label="菜单"
+          :aria-expanded="menuOpen"
+          @click="menuOpen = !menuOpen"
+        >
+          <svg width="20" height="20" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6H15M3 9H15M3 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
       </div>
       <main ref="mainEl" class="app-main">
         <RouterView v-slot="{ Component }">
@@ -160,7 +175,13 @@ watch(
   place-items: center;
 }
 
-.mobile-menu-button {
+/* 移动端全局菜单按钮：桌面隐藏，移动端固定在工具栏最右（见 media） */
+.toolbar-menu-btn {
+  display: none;
+}
+
+/* 抽屉蒙版仅移动端存在；桌面兜底隐藏（防止窗口拉宽后 menuOpen 残留） */
+.sidebar-mask {
   display: none;
 }
 
@@ -330,15 +351,54 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .mobile-menu-button {
+  /* 全局菜单入口：工具栏最右 ☰（替代原左下角悬浮「菜单」按钮） */
+  .toolbar-menu-btn {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    margin-right: 14px;
+    padding: 0;
+    background: none;
+    color: var(--muted);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .toolbar-menu-btn:hover:not(:disabled) {
+    background: rgba(13, 148, 136, 0.09);
+    color: var(--accent);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .toolbar-menu-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.35);
+  }
+
+  /* 蒙版：盖住工具栏与内容，点击收起抽屉；抽屉在其上为最高层 */
+  .sidebar-mask {
+    display: block;
     position: fixed;
-    left: 16px;
-    bottom: 16px;
-    z-index: 30;
-    border-radius: 999px;
-    padding: 14px 20px;
-    box-shadow: 0 12px 32px rgba(15, 42, 58, 0.28);
+    inset: 0;
+    z-index: 40;
+    background: rgba(15, 42, 58, 0.42);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+  .mask-fade-enter-active,
+  .mask-fade-leave-active {
+    transition: opacity 0.2s ease;
+  }
+
+  .mask-fade-enter-from,
+  .mask-fade-leave-to {
+    opacity: 0;
   }
 
   .sidebar {
@@ -347,7 +407,7 @@ h1 {
     width: min(84vw, 320px);
     transform: translateX(-110%);
     transition: transform 0.22s ease;
-    z-index: 20;
+    z-index: 50;
     background: rgba(240, 248, 250, 0.97);
   }
 
