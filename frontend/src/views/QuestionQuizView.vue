@@ -662,10 +662,6 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-.fb-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
 .fb-btn:active:not(:disabled) {
   transform: translateY(0);
 }
@@ -675,17 +671,9 @@ onBeforeUnmount(() => {
   background: rgba(217, 95, 95, 0.1);
 }
 
-.fb-forgot:hover:not(:disabled) {
-  background: rgba(217, 95, 95, 0.2);
-}
-
 .fb-fuzzy {
   color: #b45309;
   background: rgba(180, 83, 9, 0.1);
-}
-
-.fb-fuzzy:hover:not(:disabled) {
-  background: rgba(180, 83, 9, 0.18);
 }
 
 .fb-known {
@@ -693,17 +681,44 @@ onBeforeUnmount(() => {
   background: rgba(13, 148, 136, 0.12);
 }
 
-.fb-known:hover:not(:disabled) {
-  background: rgba(13, 148, 136, 0.22);
-}
-
 .fb-mastered {
   color: #64748b;
   background: rgba(100, 116, 139, 0.12);
 }
 
-.fb-mastered:hover:not(:disabled) {
-  background: rgba(100, 116, 139, 0.22);
+/* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
+@media (hover: hover) {
+  .fb-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .fb-forgot:hover:not(:disabled) {
+    background: rgba(217, 95, 95, 0.2);
+  }
+
+  .fb-fuzzy:hover:not(:disabled) {
+    background: rgba(180, 83, 9, 0.18);
+  }
+
+  .fb-known:hover:not(:disabled) {
+    background: rgba(13, 148, 136, 0.22);
+  }
+
+  .fb-mastered:hover:not(:disabled) {
+    background: rgba(100, 116, 139, 0.22);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(13, 148, 136, 0.16);
+  }
+
+  .btn-cancel:hover {
+    background: rgba(15, 42, 58, 0.06);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .empty {
@@ -776,10 +791,6 @@ onBeforeUnmount(() => {
   transition: background 0.15s ease;
 }
 
-.btn-ghost:hover {
-  background: rgba(13, 148, 136, 0.16);
-}
-
 .btn-cancel,
 .btn-primary {
   padding: 8px 18px;
@@ -796,19 +807,11 @@ onBeforeUnmount(() => {
   color: var(--ink);
 }
 
-.btn-cancel:hover {
-  background: rgba(15, 42, 58, 0.06);
-}
-
 .btn-primary {
   background: var(--primary);
   color: #fff;
   border: none;
   box-shadow: 0 8px 18px rgba(15, 118, 110, 0.22);
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
 }
 
 .btn-ghost:focus-visible,

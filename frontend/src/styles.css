@@ -41,6 +41,8 @@ body {
 
 * {
   box-sizing: border-box;
+  /* 移动端点按默认半透明蓝高亮去掉：反馈交给各按钮自己的 :active */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ---------- 页面骨架 ---------- */
@@ -52,9 +54,11 @@ body {
   border-bottom: 1px solid rgba(13, 148, 136, 0.35);
 }
 
-.vditor-reset a:hover {
-  color: #0f766e;
-  border-bottom-color: rgba(15, 118, 110, 0.7);
+@media (hover: hover) {
+  .vditor-reset a:hover {
+    color: #0f766e;
+    border-bottom-color: rgba(15, 118, 110, 0.7);
+  }
 }
 
 .page {
@@ -231,10 +235,12 @@ select {
   cursor: pointer;
 }
 
-input:hover:not(:focus):not([type='submit']),
-select:hover:not(:focus),
-textarea:hover:not(:focus) {
-  border-color: rgba(13, 148, 136, 0.45);
+@media (hover: hover) {
+  input:hover:not(:focus):not([type='submit']),
+  select:hover:not(:focus),
+  textarea:hover:not(:focus) {
+    border-color: rgba(13, 148, 136, 0.45);
+  }
 }
 
 input::placeholder,
@@ -265,10 +271,23 @@ button {
   transition: background 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
 }
 
-button:hover:not(:disabled) {
-  background: var(--primary-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.26);
+/* hover 效果仅限真正支持悬停的设备：触摸屏点击后 :hover 会粘住，样式变不回去 */
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    background: var(--primary-strong);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 118, 110, 0.26);
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: #e0eaf0;
+    box-shadow: 0 8px 18px rgba(15, 42, 58, 0.12);
+  }
+
+  button.danger:hover:not(:disabled) {
+    background: var(--danger-strong);
+    box-shadow: 0 8px 18px rgba(185, 28, 28, 0.24);
+  }
 }
 
 button:active:not(:disabled) {
@@ -292,18 +311,8 @@ button.secondary {
   border-color: var(--line);
 }
 
-button.secondary:hover:not(:disabled) {
-  background: #e0eaf0;
-  box-shadow: 0 8px 18px rgba(15, 42, 58, 0.12);
-}
-
 button.danger {
   background: var(--danger);
-}
-
-button.danger:hover:not(:disabled) {
-  background: var(--danger-strong);
-  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.24);
 }
 
 /* ---------- 徽章与标签 ---------- */

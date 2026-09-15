@@ -617,9 +617,11 @@ onMounted(refresh);
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.row:hover {
-  border-color: rgba(26, 43, 58, 0.2);
-  box-shadow: var(--shadow-card);
+@media (hover: hover) {
+  .row:hover {
+    border-color: rgba(26, 43, 58, 0.2);
+    box-shadow: var(--shadow-card);
+  }
 }
 
 .row p {

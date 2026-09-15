@@ -163,7 +163,9 @@ onMounted(loadDetail);
   transition: background 0.15s ease;
 }
 
-.series-badge:hover {
-  background: rgba(13, 148, 136, 0.2);
+@media (hover: hover) {
+  .series-badge:hover {
+    background: rgba(13, 148, 136, 0.2);
+  }
 }
 </style>

@@ -505,9 +505,11 @@ onBeforeUnmount(() => {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.start-quiz:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(15, 118, 110, 0.34);
+@media (hover: hover) {
+  .start-quiz:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(15, 118, 110, 0.34);
+  }
 }
 
 .loading {
@@ -962,9 +964,11 @@ onBeforeUnmount(() => {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.recent-item:hover {
-  background: rgba(13, 148, 136, 0.06);
-  border-color: rgba(13, 148, 136, 0.16);
+@media (hover: hover) {
+  .recent-item:hover {
+    background: rgba(13, 148, 136, 0.06);
+    border-color: rgba(13, 148, 136, 0.16);
+  }
 }
 
 .recent-title {

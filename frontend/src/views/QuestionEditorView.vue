@@ -486,9 +486,11 @@ onBeforeUnmount(() => {
   transition: border-color 0.16s ease, background 0.16s ease;
 }
 
-.tag-option:hover,
-.choice-item:hover {
-  border-color: rgba(26, 43, 58, 0.24);
+@media (hover: hover) {
+  .tag-option:hover,
+  .choice-item:hover {
+    border-color: rgba(26, 43, 58, 0.24);
+  }
 }
 
 .tag-dot {

@@ -464,21 +464,24 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.scope-btn:hover:not(:disabled) {
-  background: rgba(13, 148, 136, 0.09);
-  color: var(--accent);
-  transform: none;
-  box-shadow: none;
+/* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
+@media (hover: hover) {
+  .scope-btn:hover:not(:disabled) {
+    background: rgba(13, 148, 136, 0.09);
+    color: var(--accent);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .scope-btn.active:hover:not(:disabled) {
+    background: var(--primary-strong);
+  }
 }
 
 .scope-btn.active,
 .scope-btn.active:hover:not(:disabled) {
   background: var(--primary);
   color: #fff;
-}
-
-.scope-btn.active:hover:not(:disabled) {
-  background: var(--primary-strong);
 }
 
 .scope-btn:focus-visible {
@@ -504,7 +507,6 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
   box-shadow: none;
 }
 
-.field-btn:hover:not(:disabled),
 .field-btn:focus-visible {
   background: #e0eaf0;
   color: var(--ink);
@@ -539,17 +541,26 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
   box-shadow: none;
 }
 
-.field-menu .menu-item:hover:not(:disabled) {
-  background: rgba(13, 148, 136, 0.09);
-  color: var(--accent);
-  transform: none;
-  box-shadow: none;
-}
-
 .field-menu .menu-item.active,
 .field-menu .menu-item.active:hover:not(:disabled) {
   background: var(--primary);
   color: #fff;
+}
+
+@media (hover: hover) {
+  .field-btn:hover:not(:disabled) {
+    background: #e0eaf0;
+    color: var(--ink);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .field-menu .menu-item:hover:not(:disabled) {
+    background: rgba(13, 148, 136, 0.09);
+    color: var(--accent);
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 .refresh-btn {
@@ -638,10 +649,12 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
   color: inherit;
 }
 
-.card-head:hover {
-  background: none;
-  transform: none;
-  box-shadow: none;
+@media (hover: hover) {
+  .card-head:hover {
+    background: none;
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 .card-head:focus-visible {
@@ -790,15 +803,17 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
   transition: color 0.15s ease;
 }
 
-.text-btn:hover {
-  background: none;
-  transform: none;
-  box-shadow: none;
-  color: var(--accent);
-}
+@media (hover: hover) {
+  .text-btn:hover {
+    background: none;
+    transform: none;
+    box-shadow: none;
+    color: var(--accent);
+  }
 
-.text-btn.danger-text:hover {
-  color: var(--danger);
+  .text-btn.danger-text:hover {
+    color: var(--danger);
+  }
 }
 
 .sep {

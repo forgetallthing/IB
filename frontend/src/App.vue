@@ -29,8 +29,7 @@
     <div class="content-shell">
       <!-- 固定顶部工具栏：各页页头经 PageToolbar Teleport 进 #page-toolbar-slot，不参与滚动 -->
       <div class="page-toolbar-row">
-        <div id="page-toolbar-slot"></div>
-        <!-- 移动端：全局导航菜单收进工具栏最右 ☰ -->
+        <!-- 移动端：全局导航菜单收进工具栏最左 ☰ -->
         <button
           class="toolbar-menu-btn"
           type="button"
@@ -42,6 +41,7 @@
             <path d="M3 6H15M3 9H15M3 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
           </svg>
         </button>
+        <div id="page-toolbar-slot"></div>
       </div>
       <main ref="mainEl" class="app-main">
         <RouterView v-slot="{ Component }">
@@ -283,9 +283,12 @@ h1 {
   transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.nav-links a:hover {
-  background: rgba(13, 148, 136, 0.08);
-  color: var(--ink);
+/* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
+@media (hover: hover) {
+  .nav-links a:hover {
+    background: rgba(13, 148, 136, 0.08);
+    color: var(--ink);
+  }
 }
 
 /* 路由前缀命中（如 /questions 包含 /questions/edit）给浅色态，精确命中才高亮深色 */
@@ -335,10 +338,12 @@ h1 {
   pointer-events: auto;
 }
 
-.back-top:hover {
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.32);
+@media (hover: hover) {
+  .back-top:hover {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(15, 118, 110, 0.32);
+  }
 }
 
 .app-main > * {
@@ -351,7 +356,7 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  /* 全局菜单入口：工具栏最右 ☰（替代原左下角悬浮「菜单」按钮） */
+  /* 全局菜单入口：工具栏最左 ☰（替代原左下角悬浮「菜单」按钮） */
   .toolbar-menu-btn {
     display: inline-flex;
     align-items: center;
@@ -359,7 +364,8 @@ h1 {
     flex-shrink: 0;
     width: 38px;
     height: 38px;
-    margin-right: 14px;
+    margin-left: 14px;
+    margin-right: 4px;
     padding: 0;
     background: none;
     color: var(--muted);
@@ -368,11 +374,14 @@ h1 {
     box-shadow: none;
   }
 
-  .toolbar-menu-btn:hover:not(:disabled) {
-    background: rgba(13, 148, 136, 0.09);
-    color: var(--accent);
-    transform: none;
-    box-shadow: none;
+  /* hover 粘住问题：触摸设备不给悬停反馈 */
+  @media (hover: hover) {
+    .toolbar-menu-btn:hover:not(:disabled) {
+      background: rgba(13, 148, 136, 0.09);
+      color: var(--accent);
+      transform: none;
+      box-shadow: none;
+    }
   }
 
   .toolbar-menu-btn:focus-visible {

@@ -536,8 +536,11 @@ onActivated(() => {
   transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
 }
 
-.series-row:hover {
-  background: rgba(13, 148, 136, 0.06);
+/* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
+@media (hover: hover) {
+  .series-row:hover {
+    background: rgba(13, 148, 136, 0.06);
+  }
 }
 
 .series-row[draggable='true'] {
@@ -632,11 +635,33 @@ onActivated(() => {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.icon-btn:hover:not(:disabled) {
-  background: rgba(13, 148, 136, 0.1);
-  color: var(--accent);
-  transform: none;
-  box-shadow: none;
+/* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
+@media (hover: hover) {
+  .icon-btn:hover:not(:disabled) {
+    background: rgba(13, 148, 136, 0.1);
+    color: var(--accent);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .icon-btn.remove-btn:hover:not(:disabled) {
+    background: rgba(220, 38, 38, 0.09);
+    color: var(--danger);
+  }
+
+  .article-row:hover .icon-btn.remove-btn {
+    opacity: 1;
+  }
+
+  .menu-item:hover:not(:disabled) {
+    background: var(--surface-tint);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .menu-item.danger-text:hover:not(:disabled) {
+    background: rgba(220, 38, 38, 0.08);
+  }
 }
 
 .icon-btn.active {
@@ -649,15 +674,6 @@ onActivated(() => {
   width: 26px;
   height: 26px;
   opacity: 0.55;
-}
-
-.article-row:hover .icon-btn.remove-btn {
-  opacity: 1;
-}
-
-.icon-btn.remove-btn:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.09);
-  color: var(--danger);
 }
 
 /* ☰ 下拉操作菜单 */
@@ -693,18 +709,8 @@ onActivated(() => {
   transition: background 0.14s ease;
 }
 
-.menu-item:hover:not(:disabled) {
-  background: var(--surface-tint);
-  transform: none;
-  box-shadow: none;
-}
-
 .menu-item.danger-text {
   color: var(--danger);
-}
-
-.menu-item.danger-text:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.08);
 }
 
 @keyframes menu-in {
@@ -750,8 +756,10 @@ onActivated(() => {
   transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
 }
 
-.article-row:hover {
-  border-color: rgba(13, 148, 136, 0.35);
+@media (hover: hover) {
+  .article-row:hover {
+    border-color: rgba(13, 148, 136, 0.35);
+  }
 }
 
 .article-row[draggable='true'] {
@@ -805,15 +813,17 @@ onActivated(() => {
   transition: color 0.15s ease;
 }
 
-.text-btn:hover {
-  background: none;
-  transform: none;
-  box-shadow: none;
-  color: var(--accent);
-}
+@media (hover: hover) {
+  .text-btn:hover {
+    background: none;
+    transform: none;
+    box-shadow: none;
+    color: var(--accent);
+  }
 
-.text-btn.danger-text:hover {
-  color: var(--danger);
+  .text-btn.danger-text:hover {
+    color: var(--danger);
+  }
 }
 
 .empty-hint {
@@ -898,8 +908,10 @@ onActivated(() => {
   transition: border-color 0.16s ease, background 0.16s ease;
 }
 
-.picker-row:hover {
-  border-color: rgba(13, 148, 136, 0.35);
+@media (hover: hover) {
+  .picker-row:hover {
+    border-color: rgba(13, 148, 136, 0.35);
+  }
 }
 
 .picker-row:has(input:checked) {

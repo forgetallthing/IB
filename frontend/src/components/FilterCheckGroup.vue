@@ -90,10 +90,13 @@ function selectAll() {
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.check-chip:hover {
-  border-color: rgba(13, 148, 136, 0.45);
-  background: rgba(13, 148, 136, 0.05);
-  transform: none;
+/* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
+@media (hover: hover) {
+  .check-chip:hover {
+    border-color: rgba(13, 148, 136, 0.45);
+    background: rgba(13, 148, 136, 0.05);
+    transform: none;
+  }
 }
 
 .check-chip .box {

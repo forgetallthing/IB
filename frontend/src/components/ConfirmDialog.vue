@@ -126,19 +126,11 @@ p {
   color: var(--ink);
 }
 
-.btn-cancel:hover {
-  background: rgba(15, 42, 58, 0.06);
-}
-
 .btn-primary {
   background: var(--primary);
   color: #fff;
   border: none;
   box-shadow: 0 8px 18px rgba(15, 118, 110, 0.22);
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -148,9 +140,20 @@ p {
   box-shadow: 0 8px 18px rgba(179, 38, 30, 0.28);
 }
 
-.btn-danger:hover {
-  background: #a01f18;
-  transform: translateY(-1px);
+/* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
+@media (hover: hover) {
+  .btn-cancel:hover {
+    background: rgba(15, 42, 58, 0.06);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-danger:hover {
+    background: #a01f18;
+    transform: translateY(-1px);
+  }
 }
 
 .btn-cancel:focus-visible,
