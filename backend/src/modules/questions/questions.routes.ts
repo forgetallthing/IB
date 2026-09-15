@@ -184,44 +184,25 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     let candidates: Candidate[] = [];
 
     if (me) {
-      // 登录用户：join 自身的回想状态计算权重
+      // 登录用户：两步批量查询代替逐文档 $lookup——候选 2000+ 时 $lookup 子管道实测 1.4s+，
+      // 改为 先取候选 id 再按 {userId, questionId $in} 批量查回想状态（命中 quizstates 联合唯一索引，毫秒级）
       const userIdObj = new Types.ObjectId(me.sub);
-      const rows = await QuestionModel.aggregate<{
-        _id: unknown;
-        drawCount?: number;
-        mastered?: boolean;
-      }>([
-        { $match: match },
-        {
-          $lookup: {
-            from: 'quizstates',
-            let: { qid: '$_id' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: { $and: [{ $eq: ['$questionId', '$$qid'] }, { $eq: ['$userId', userIdObj] }] },
-                },
-              },
-              { $project: { drawCount: 1, mastered: 1 } },
-            ],
-            as: 'state',
-          },
-        },
-        { $addFields: { state: { $arrayElemAt: ['$state', 0] } } },
-        {
-          $project: {
-            _id: 1,
-            drawCount: { $ifNull: ['$state.drawCount', 0] },
-            mastered: '$state.mastered',
-          },
-        },
-      ]);
-
-      candidates = rows.map((row) => ({
-        id: String(row._id),
-        drawCount: row.drawCount ?? 0,
-        mastered: row.mastered === true,
-      }));
+      const rows = (await QuestionModel.find(match).select('_id').lean()) as Array<{ _id: unknown }>;
+      const states = (await QuizStateModel.find({
+        userId: userIdObj,
+        questionId: { $in: rows.map((row) => row._id) },
+      })
+        .select('questionId drawCount mastered')
+        .lean()) as Array<{ questionId: unknown; drawCount?: number; mastered?: boolean }>;
+      const stateMap = new Map(states.map((state) => [String(state.questionId), state]));
+      candidates = rows.map((row) => {
+        const state = stateMap.get(String(row._id));
+        return {
+          id: String(row._id),
+          drawCount: state?.drawCount ?? 0,
+          mastered: state?.mastered === true,
+        };
+      });
     } else {
       // 游客：没有个人权重，全部按"优先推荐"等概率抽取
       const rows = await QuestionModel.find(match).select('_id').lean();
