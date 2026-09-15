@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { marked } from 'marked';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
@@ -10,8 +9,6 @@ import { useAuthStore } from '../stores/auth';
 import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
 
 defineOptions({ name: 'QuestionQuizView' });
-
-marked.setOptions({ gfm: true, breaks: true });
 
 interface QuizQuestion {
   id: string;
@@ -34,7 +31,7 @@ const showAnswer = ref(false);
 const showAiPanel = ref(false);
 const answerEl = ref<HTMLDivElement | null>(null);
 const myEditorRef = ref<HTMLDivElement | null>(null);
-const titleHtml = ref('');
+const titleEl = ref<HTMLDivElement | null>(null);
 const analyzing = ref(false);
 const aiAnalysis = ref('');
 const aiEl = ref<HTMLDivElement | null>(null);
@@ -201,8 +198,9 @@ async function drawQuestion(excludeId?: string) {
     showAnswer.value = false;
     showAiPanel.value = false;
     aiAnalysis.value = '';
-    // 标题按纯文本转义后再解析，防止 title 里的 <tag> 被当成真 HTML 吞字
-    titleHtml.value = marked.parse((item.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;'), { async: false }) as string;
+    // 标题改走与正文一致的 Vditor 渲染管线：多段落/图片/代码块标题才能完整展示
+    await nextTick();
+    if (titleEl.value) renderMarkdown(titleEl.value, item.title || '');
   } catch (error) {
     fail(error instanceof Error ? error.message : '抽题失败');
   } finally {
@@ -314,8 +312,7 @@ onBeforeUnmount(() => {
           <span class="pill" :class="`difficulty-${question.difficulty}`">{{ difficultyLabels[question.difficulty] }}</span>
           <span v-for="tag in question.tags" :key="tag" class="tag">{{ tag }}</span>
         </div>
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="question-title" v-html="titleHtml"></div>
+        <div ref="titleEl" class="question-title"></div>
         <p class="meta">来自 {{ question.creatorName }} 的笔记 · {{ question.visibility === 'public' ? '公开' : '私有' }} · 出现 {{ question.drawCount }} 次</p>
       </article>
 
@@ -429,13 +426,32 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
+/* .question-title 会带上 vditor-reset 类，scoped 选择器优先级更高，覆盖其字体/颜色/行高 */
 .question-title {
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  font-family: inherit;
+  color: inherit;
+  line-height: 1.6;
 }
 
 .question-title :deep(p) {
+  margin: 0;
+}
+
+/* 多段标题的段间距（vditor-reset 自带的 16px 偏大，这里收紧） */
+.question-title :deep(p + p) {
+  margin-top: 8px;
+}
+
+.question-title :deep(img) {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+/* p 默认 1em 外边距会叠加在 grid gap 上，清零后卡片内间距节奏统一（上下 20 / 中间 10） */
+.meta {
   margin: 0;
 }
 
@@ -443,7 +459,8 @@ onBeforeUnmount(() => {
 /* 手机默认顺序（order）：AI 分析 → 参考答案（答案在作答上方）→ 我的作答 */
 .quiz-grid {
   flex: 1;
-  min-height: 0;
+  /* 标题极长时卡片会把页面撑爆，作答区至少保留 50dvh，保证往下滚动仍可作答 */
+  min-height: 50dvh;
   display: grid;
   gap: 16px;
   grid-template-columns: minmax(0, 1fr);
@@ -529,8 +546,8 @@ onBeforeUnmount(() => {
 
   .quiz-grid .input-side {
     flex: none;
-    height: 44dvh;
-    min-height: 240px;
+    height: 54dvh;
+    min-height: 280px;
   }
 
   /* 反馈按钮缩小尺寸，保证手机上一行排得下四个 */
@@ -542,6 +559,11 @@ onBeforeUnmount(() => {
 
 /* PC / Pad：左侧作答占满全高，右侧按需放 AI 分析 / 参考答案 */
 @media (min-width: 900px) {
+  /* 桌面端作答区基础高度更高：被长标题挤压时至少保留 70dvh */
+  .quiz-grid {
+    min-height: 70dvh;
+  }
+
   /* 行数显式声明，grid-row: 1 / -1 才能正确跨到最后一行 */
   .quiz-grid.no-side {
     grid-template-columns: minmax(0, 1fr);
