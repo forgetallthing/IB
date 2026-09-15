@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onActivated, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onActivated, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { request } from '../api';
 import PageToolbar from '../components/PageToolbar.vue';
@@ -80,6 +80,41 @@ async function loadSeries() {
   } finally {
     loading.value = false;
   }
+}
+
+// ---------- 工具栏搜索：按系列名/简介/文章标题过滤（纯前端） ----------
+const searchQuery = ref('');
+const searchKw = computed(() => searchQuery.value.trim().toLowerCase());
+
+// 搜索时需要全量文章标题：懒加载的目录在此补齐（每系列只补缺，不重复请求）
+async function ensureAllArticles() {
+  const missing = seriesList.value.filter((s) => !articlesBySeries.value[s.id]);
+  await Promise.all(missing.map((s) => loadArticles(s.id)));
+}
+
+watch(searchQuery, (value) => {
+  if (value.trim()) void ensureAllArticles();
+});
+
+// 搜索时隐藏不匹配的系列；系列名/简介命中的系列保留全部文章，否则仅留标题命中的文章
+const visibleSeries = computed(() => {
+  const kw = searchKw.value;
+  if (!kw) return seriesList.value;
+  return seriesList.value.filter(
+    (s) =>
+      s.title.toLowerCase().includes(kw) ||
+      s.description.toLowerCase().includes(kw) ||
+      articlesOf(s.id).some((a) => a.title.toLowerCase().includes(kw)),
+  );
+});
+
+function articlesOfView(s: SeriesItem): CatalogArticle[] {
+  const kw = searchKw.value;
+  const list = articlesOf(s.id);
+  if (!kw) return list;
+  const seriesHit = s.title.toLowerCase().includes(kw) || s.description.toLowerCase().includes(kw);
+  if (seriesHit) return list;
+  return list.filter((a) => a.title.toLowerCase().includes(kw));
 }
 
 // ---------- 拖拽排序（同级之间）：系列行与文章行 ----------
@@ -363,19 +398,21 @@ onActivated(() => {
         <p class="subtitle">目录形式组织系列与文章：点击系列展开目录，同级拖拽调整顺序。</p>
       </div>
       <div class="header-actions">
+        <input v-model="searchQuery" class="series-search" type="search" placeholder="搜索系列或文章" />
         <button type="button" @click="openCreate">新建系列</button>
       </div>
     </PageToolbar>
 
     <p v-if="loading && !seriesList.length" class="loading">加载中…</p>
     <p v-else-if="!seriesList.length" class="empty-hint panel">还没有系列，点击右上角「新建系列」创建一个</p>
+    <p v-else-if="searchKw && !visibleSeries.length" class="empty-hint panel">没有匹配的系列或文章</p>
 
     <div v-else class="tree panel">
-      <div v-for="(s, si) in seriesList" :key="s.id" class="series-node">
-        <!-- 系列行：点击折叠/展开，整行可拖拽排序 -->
+      <div v-for="(s, si) in visibleSeries" :key="s.id" class="series-node">
+        <!-- 系列行：点击折叠/展开，整行可拖拽排序（搜索过滤时索引错位，禁用拖拽） -->
         <div
           class="series-row"
-          :draggable="true"
+          :draggable="!searchKw"
           :class="{ dragging: dragType === 'series' && dragFrom === si, 'drag-over': overKey === `series:${si}` && dragType === 'series' }"
           @click="toggleExpand(s)"
           @dragstart="onSeriesDragStart(si)"
@@ -383,7 +420,7 @@ onActivated(() => {
           @drop.prevent="onSeriesDrop(si)"
           @dragend="resetDrag"
         >
-          <span class="chevron" :class="{ open: isExpanded(s.id) }">▾</span>
+          <span class="chevron" :class="{ open: isExpanded(s.id) || !!searchKw }">▾</span>
           <span class="series-title">{{ s.title }}</span>
           <span v-if="s.description" class="series-desc">{{ s.description }}</span>
           <span class="series-meta">{{ s.articleCount }} 篇</span>
@@ -409,16 +446,18 @@ onActivated(() => {
           </span>
         </div>
 
-        <!-- 文章目录：展开时显示，点击跳详情，同级可拖拽 -->
-        <div v-if="isExpanded(s.id)" class="article-rows">
+        <!-- 文章目录：展开时显示，点击跳详情，同级可拖拽；搜索时自动展开并仅显示命中文章 -->
+        <div v-if="isExpanded(s.id) || searchKw" class="article-rows">
           <p v-if="loadingArticles[s.id]" class="loading sub-loading">加载中…</p>
-          <p v-else-if="!articlesOf(s.id).length" class="empty-hint sub-empty">目录还是空的，点击「添加」把自己写的文章加进来</p>
+          <p v-else-if="!articlesOfView(s).length" class="empty-hint sub-empty">
+            {{ searchKw ? '没有匹配的文章' : '目录还是空的，点击「添加」把自己写的文章加进来' }}
+          </p>
           <template v-else>
             <div
-              v-for="(a, ai) in articlesOf(s.id)"
+              v-for="(a, ai) in articlesOfView(s)"
               :key="a.id"
               class="article-row"
-              :draggable="s.canManage"
+              :draggable="s.canManage && !searchKw"
               :class="{ dragging: dragType === 'article' && dragSeriesId === s.id && dragFrom === ai, 'drag-over': overKey === `article:${s.id}:${ai}` && dragType === 'article' && dragSeriesId === s.id }"
               @click="router.push(`/questions/${a.id}`)"
               @dragstart="onArticleDragStart(s, ai)"
@@ -511,6 +550,24 @@ onActivated(() => {
 </template>
 
 <style scoped>
+/* 工具栏搜索框：header-actions 内，随工具栏紧凑化 */
+.series-search {
+  width: 190px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 10px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .series-search {
+    width: 110px;
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+}
+
 .tree {
   margin-top: 16px;
   padding: 10px 12px;
