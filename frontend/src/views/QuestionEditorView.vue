@@ -8,7 +8,7 @@ import PageToolbar from '../components/PageToolbar.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
-import { questionListDirty } from '../stores/dataDirty';
+import { questionListDirty, quizDirty } from '../stores/dataDirty';
 
 interface QuestionItem {
   id: string;
@@ -292,6 +292,8 @@ async function save() {
     if (form.id) {
       await request(`/questions/${form.id}`, { method: 'PUT', body: JSON.stringify(payload) });
       notice('笔记已更新');
+      // 若正在回想页编辑该题，返回时静默刷新标题与参考详情
+      quizDirty.value = true;
     } else {
       const result = await request<{ id: string }>('/questions', { method: 'POST', body: JSON.stringify(payload) });
       form.id = result.id;

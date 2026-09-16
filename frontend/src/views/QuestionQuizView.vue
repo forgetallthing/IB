@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
 import PageToolbar from '../components/PageToolbar.vue';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
+import { quizDirty } from '../stores/dataDirty';
 import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
 
 defineOptions({ name: 'QuestionQuizView' });
@@ -25,6 +27,7 @@ interface QuizQuestion {
 
 const { notice, fail } = useToast();
 const auth = useAuthStore();
+const router = useRouter();
 const loading = ref(false);
 const question = ref<QuizQuestion | null>(null);
 const showAnswer = ref(false);
@@ -237,6 +240,36 @@ function toggleAnswer() {
   showAnswer.value = !showAnswer.value;
 }
 
+// 从参考详情跳编辑页；本页被 KeepAlive 保活，返回时仍是同一题与作答现场
+function goEdit() {
+  if (!question.value) return;
+  router.push(`/questions/edit?id=${question.value.id}`);
+}
+
+// 从编辑页返回：消费脏标记，同一题静默刷新标题与参考详情（不重新抽题、不清空作答）
+onActivated(async () => {
+  if (!quizDirty.value || !question.value) return;
+  quizDirty.value = false;
+  const id = question.value.id;
+  try {
+    const item = await request<Partial<QuizQuestion>>(`/questions/${id}`);
+    // 请求期间若已换题则丢弃
+    if (!question.value || question.value.id !== id) return;
+    // 原地更新字段：整体替换会触发 question 的 watch 清空作答现场
+    if (item.title != null) question.value.title = item.title;
+    if (item.content != null) question.value.content = item.content;
+    if (item.tags != null) question.value.tags = item.tags;
+    if (item.difficulty != null) question.value.difficulty = item.difficulty;
+    if (item.visibility != null) question.value.visibility = item.visibility;
+    if (item.creatorName != null) question.value.creatorName = item.creatorName;
+    await nextTick();
+    if (titleEl.value) renderMarkdown(titleEl.value, question.value.title || '');
+    if (showAnswer.value && answerEl.value) renderMarkdown(answerEl.value, question.value.content);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : '同步编辑结果失败');
+  }
+});
+
 // 首次抽到题目后初始化作答编辑器；换题时清空作答
 watch(question, async (val) => {
   if (!val) return;
@@ -326,7 +359,12 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-if="showAnswer" class="panel side answer-side">
-          <p class="side-label">参考详情</p>
+          <div class="side-label-row">
+            <p class="side-label">参考详情</p>
+            <button type="button" class="edit-jump" title="跳转编辑本篇笔记" @click="goEdit">
+              编辑
+            </button>
+          </div>
           <div ref="answerEl" class="md-content"></div>
           <!-- 回想自评反馈：直接调整推送权重 -->
           <div v-if="auth.user" class="feedback-bar">
@@ -493,6 +531,37 @@ onBeforeUnmount(() => {
   top: 0;
   background: var(--surface);
   z-index: 1;
+}
+
+/* 详情面板头部行：标题 + 编辑按钮，行级 sticky（覆盖 label 自身的 sticky） */
+.side-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.side-label-row .side-label {
+  position: static;
+  background: none;
+}
+
+.edit-jump {
+  flex-shrink: 0;
+  padding: 3px 12px;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
 
 .ai-placeholder {
@@ -740,6 +809,10 @@ onBeforeUnmount(() => {
 
   .btn-primary:hover {
     transform: translateY(-1px);
+  }
+
+  .edit-jump:hover {
+    background: rgba(13, 148, 136, 0.16);
   }
 }
 
