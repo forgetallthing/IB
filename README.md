@@ -237,6 +237,21 @@ journalctl -u ib-deploy -f            # 查看监听日志
 
 正常状态是**完全安静**（每 5 秒检查一次 zip，无变化不输出）；上传新包后 5 秒内出现 `detected new package, deploying → deploy OK`。
 
+**MongoDB 每日自动备份**（mongo-backup.sh + systemd 定时器，仓库 `deploy/` 目录）：
+
+```bash
+cp /web/IB/deploy/ib-backup.service /web/IB/deploy/ib-backup.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now ib-backup.timer   # 每天 03:30 自动备份（关机错过会开机补跑）
+systemctl list-timers ib-backup.timer    # 查看下次执行时间
+journalctl -u ib-backup                  # 查看备份日志
+```
+
+- 备份文件落在服务器 `/web/IB/backups/interview_bank_时间戳.archive.gz`（mongodump 归档 + gzip，含索引），凭证自动读取 `/web/IB/.env` 的 `MONGO_USER/MONGO_PASSWORD`
+- 自动保留最近 31 天（一个月），过期文件自动清理
+- 手动立即备份：`systemctl start ib-backup.service`
+- 恢复：`docker compose exec -T mongo mongorestore --authenticationDatabase admin -u <user> -p <password> --archive --gzip < /web/IB/backups/<备份文件>`
+
 ### 注意事项
 
 - `.env`、`docker/certs/` 不在 git 仓库中，解压覆盖**不会**影响它们

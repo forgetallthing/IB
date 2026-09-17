@@ -5,6 +5,9 @@ import { SeriesModel } from '../../models/series.model.js';
 import { QuizStateModel, levelWeight, autoLevelByDrawCount } from '../../models/quizState.model.js';
 import { QuizLogModel } from '../../models/quizLog.model.js';
 
+// 转义正则特殊字符：用户输入按字面子串匹配，避免非法正则报错与回溯慢查询
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export async function registerQuestionRoutes(app: FastifyInstance) {
   app.get('/api/questions', async (request) => {
     const query = request.query as {
@@ -59,12 +62,13 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     }
     if (query.q) {
       // qf 限定搜索范围：title=仅标题、content=仅正文，缺省搜全部
+      const kw = escapeRegex(query.q);
       const field = query.qf === 'title' || query.qf === 'content' ? query.qf : null;
       filter.$or = field
-        ? [{ [field]: { $regex: query.q, $options: 'i' } }]
+        ? [{ [field]: { $regex: kw, $options: 'i' } }]
         : [
-            { title: { $regex: query.q, $options: 'i' } },
-            { content: { $regex: query.q, $options: 'i' } },
+            { title: { $regex: kw, $options: 'i' } },
+            { content: { $regex: kw, $options: 'i' } },
           ];
     }
     if (query.difficulty) {
@@ -75,7 +79,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       filter.creatorId = query.creatorId;
     }
     if (query.creatorName) {
-      filter.creatorName = { $regex: query.creatorName, $options: 'i' };
+      filter.creatorName = { $regex: escapeRegex(query.creatorName), $options: 'i' };
     }
     if (query.tags) {
       filter.tags = Array.isArray(query.tags) ? { $in: query.tags } : { $in: [query.tags] };

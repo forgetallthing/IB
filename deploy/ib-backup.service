@@ -1,0 +1,8 @@
+[Unit]
+Description=IB MongoDB daily backup (mongodump)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /web/IB/deploy/mongo-backup.sh

@@ -22,5 +22,14 @@ const questionSchema = new Schema(
   { timestamps: true },
 );
 
+// 列表默认按更新时间倒序
+questionSchema.index({ updatedAt: -1 });
+// 按创建人筛选 / 私有笔记查询 / 看板聚合（creatorId 精确匹配）
+questionSchema.index({ creatorId: 1, updatedAt: -1 });
+// 系列目录：按所属系列取文章并按 order 排序
+questionSchema.index({ seriesId: 1, order: 1 });
+// 标签筛选（multikey）
+questionSchema.index({ tags: 1 });
+
 export type QuestionDocument = InferSchemaType<typeof questionSchema>;
 export const QuestionModel = model('Question', questionSchema);

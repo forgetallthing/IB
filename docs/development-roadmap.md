@@ -30,12 +30,13 @@
 - 全站固定顶部工具栏（PageToolbar）与列表搜索范围筛选（标题/正文）
 - 系列笔记页页内搜索
 - 页面保活（KeepAlive）+ 脏标记静默刷新；每日回想参考详情编辑入口（编辑后返回原题不变、内容刷新）
+- 搜索关键词正则转义 + Question 模型索引补全（updatedAt/creatorId/seriesId/tags）
+- 服务器 MongoDB 每日自动备份（mongodump 归档 + systemd timer，保留一个月）
 
 ## 待办（规划中）
 
 - 导入功能（当前仅支持整库导出备份，导入未实现）
 - Markdown 渲染前 XSS 清洗（引入 DOMPurify）
-- Question 模型索引补全与搜索关键词正则转义
 - 孤儿图片 GC（引用扫描清理 GridFS 未引用文件）
 - 小程序端系列与笔记类型界面同步
 - 文章回想卡（从长文提取 Q&A 子卡片进入每日回想）
