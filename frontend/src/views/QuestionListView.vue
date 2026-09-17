@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { marked } from 'marked';
 import Vditor from 'vditor';
@@ -10,7 +10,7 @@ import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
 import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
-import { questionListDirty } from '../stores/dataDirty';
+import { editedQuestionId, questionListDirty } from '../stores/dataDirty';
 
 defineOptions({ name: 'QuestionListView' });
 
@@ -140,6 +140,14 @@ const expanded = ref<Record<string, boolean>>({});
 const contentEls = ref<Record<string, HTMLDivElement | null>>({});
 const rendered = ref<Record<string, boolean>>({});
 
+// 列表内容预览配置（本地 vditor 资源 + hljs 高亮）：展开渲染与定向更新共用
+const listPreviewOptions = {
+  lang: 'zh_CN',
+  mode: 'light',
+  cdn: '/vditor',
+  hljs: { style: 'github', lineNumber: false },
+} as const;
+
 function setContentEl(id: string, el: unknown) {
   contentEls.value[id] = (el as HTMLDivElement) ?? null;
 }
@@ -171,12 +179,7 @@ async function toggleExpand(id: string, e?: MouseEvent) {
   if (!el || !item || rendered.value[id]) return;
   rendered.value[id] = true;
   // 链接新标签页打开由 main.ts 的全局点击委托统一处理
-  Vditor.preview(el, item.content, {
-    lang: 'zh_CN',
-    mode: 'light',
-    cdn: '/vditor',
-    hljs: { style: 'github', lineNumber: false },
-  });
+  Vditor.preview(el, item.content, listPreviewOptions);
 }
 
 function isExpanded(id: string) {
@@ -304,6 +307,40 @@ onBeforeUnmount(() => {
   observer = null;
   document.removeEventListener('click', closeFieldMenu);
 });
+
+// 保活回访：优先定向同步刚编辑保存的题目（不打断已加载分页与浏览位置）；
+// 回收站等结构性变化才整体刷新列表
+onActivated(() => {
+  const editedId = editedQuestionId.value;
+  if (editedId) {
+    refreshEditedItem(editedId);
+    return;
+  }
+  if (!questionListDirty.value) return;
+  questionListDirty.value = false;
+  loadItems(true);
+});
+
+// 定向同步被编辑的题目：请求该题最新数据，若在已加载列表中则原地替换，
+// 处于展开状态时按需重渲染内容；不在列表中（或新建题）则不动列表。
+// 详情页匹配该标记时只刷新不清空，由这里完成同步后统一收尾清空
+async function refreshEditedItem(id: string) {
+  try {
+    const fresh = await request<QuestionItem>(`/questions/${id}`);
+    const index = items.value.findIndex((item) => item.id === id);
+    if (index >= 0) {
+      items.value[index] = { ...fresh, titleHtml: mdTitleHtml(fresh.title) };
+      if (expanded.value[id]) {
+        const el = contentEls.value[id];
+        if (el) Vditor.preview(el, fresh.content, listPreviewOptions);
+      }
+    }
+  } catch {
+    // 静默失败：保留列表现状
+  } finally {
+    editedQuestionId.value = null;
+  }
+}
 
 watch([query, searchField, difficulty, visibility, type, tag], () => {
   persistFilters();

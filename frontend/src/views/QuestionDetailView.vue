@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onActivated, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
@@ -9,6 +9,7 @@ import VersionDrawer from '../components/VersionDrawer.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
+import { editedQuestionId } from '../stores/dataDirty';
 
 // 详情页在 KeepAlive 中按 path 独立实例保活（App.vue keepAliveNames + isDetailPath key），
 // 滚动位置随 DOM 一起保留，无需手动记忆恢复
@@ -93,6 +94,13 @@ const canViewVersions = computed(() => {
 });
 
 onMounted(loadDetail);
+
+// 保活回访：刚编辑保存的就是当前题时静默刷新标题与正文。
+// 不清空标记——返回列表时列表页还要消费它定向同步同一题
+onActivated(() => {
+  const detailId = typeof route.params.id === 'string' ? route.params.id : '';
+  if (editedQuestionId.value && editedQuestionId.value === detailId) silentReload();
+});
 </script>
 
 <template>

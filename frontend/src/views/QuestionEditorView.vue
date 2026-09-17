@@ -9,7 +9,7 @@ import VersionDrawer from '../components/VersionDrawer.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
-import { questionListDirty, quizDirty } from '../stores/dataDirty';
+import { editedQuestionId, quizDirty } from '../stores/dataDirty';
 
 interface QuestionItem {
   id: string;
@@ -302,12 +302,13 @@ async function save() {
       notice('笔记已更新');
       // 若正在回想页编辑该题，返回时静默刷新标题与参考详情
       quizDirty.value = true;
+      // 返回列表时只定向同步该题，不整体刷新列表（不打断已加载分页与浏览位置）
+      editedQuestionId.value = form.id;
     } else {
       const result = await request<{ id: string }>('/questions', { method: 'POST', body: JSON.stringify(payload) });
       form.id = result.id;
       notice('笔记已创建，可继续编辑');
     }
-    questionListDirty.value = true;
   } catch (error) {
     fail(error instanceof Error ? error.message : '保存失败');
   } finally {

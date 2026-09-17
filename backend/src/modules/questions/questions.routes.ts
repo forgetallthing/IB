@@ -104,7 +104,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
 
     const [items, total] = await Promise.all([
-      QuestionModel.find(filter).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      QuestionModel.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       QuestionModel.countDocuments(filter),
     ]);
     return {
