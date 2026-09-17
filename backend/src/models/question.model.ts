@@ -18,6 +18,9 @@ const questionSchema = new Schema(
     aiSummary: { type: String },
     aiSuggestedTags: { type: [String], default: [] },
     aiSuggestedDifficulty: { type: String, enum: ['easy', 'medium', 'hard'] },
+    // 回收站：软删除标记。null=正常；非空=已进回收站（保留 30 天，到期由定时任务彻底删除）。
+    // 软删期间 seriesId/order/QuizState/历史版本全保留，恢复即完整还原
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

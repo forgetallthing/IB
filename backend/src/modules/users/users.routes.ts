@@ -206,18 +206,18 @@ export async function registerUserRoutes(app: FastifyInstance) {
     const todayStartUtcMs = Date.parse(`${todayKey}T00:00:00+08:00`);
 
     const [noteTotal, publicCount, privateCount, todayReviews, difficultyRows, tagRows, recentLogs] = await Promise.all([
-      QuestionModel.countDocuments({ creatorId }),
-      QuestionModel.countDocuments({ creatorId, visibility: 'public' }),
-      QuestionModel.countDocuments({ creatorId, visibility: 'private' }),
+      QuestionModel.countDocuments({ creatorId, deletedAt: null }),
+      QuestionModel.countDocuments({ creatorId, visibility: 'public', deletedAt: null }),
+      QuestionModel.countDocuments({ creatorId, visibility: 'private', deletedAt: null }),
       QuizLogModel.countDocuments({ userId: userIdObj, action: 'review', createdAt: { $gte: new Date(todayStartUtcMs) } }),
       // 我的笔记难度分布（aggregate 不会自动做类型转换，必须用 ObjectId 匹配）
       QuestionModel.aggregate<{ _id: string | null; count: number }>([
-        { $match: { creatorId: userIdObj } },
+        { $match: { creatorId: userIdObj, deletedAt: null } },
         { $group: { _id: '$difficulty', count: { $sum: 1 } } },
       ]),
       // 我最常写的标签 Top 6
       QuestionModel.aggregate<{ _id: string; count: number }>([
-        { $match: { creatorId: userIdObj } },
+        { $match: { creatorId: userIdObj, deletedAt: null } },
         { $unwind: '$tags' },
         { $group: { _id: '$tags', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
@@ -306,6 +306,8 @@ export async function registerUserRoutes(app: FastifyInstance) {
         { $match: { userId: userIdObj, action: 'review' } },
         { $lookup: { from: 'questions', localField: 'questionId', foreignField: '_id', as: 'question' } },
         { $addFields: { question: { $arrayElemAt: ['$question', 0] } } },
+        // 回收站中的笔记不参与薄弱标签统计（软删标记 deletedAt 存在于软删文档上）
+        { $match: { 'question.deletedAt': null } },
         { $unwind: { path: '$question.tags', preserveNullAndEmptyArrays: false } },
         {
           $group: {
@@ -320,11 +322,11 @@ export async function registerUserRoutes(app: FastifyInstance) {
       ]),
       // 当前推送频率分布（完全掌握 + 按出现次数的自动档位）
       QuizStateModel.find({ userId: userIdObj }).select('drawCount mastered').lean(),
-      // 可见题目总数（用于"未出现"计数）
+      // 可见题目总数（用于"未出现"计数；回收站中的笔记不计入）
       QuestionModel.countDocuments(
         me.role === 'admin'
-          ? {}
-          : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] },
+          ? { deletedAt: null }
+          : { deletedAt: null, $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] },
       ),
     ]);
 

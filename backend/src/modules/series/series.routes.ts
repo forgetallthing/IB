@@ -32,7 +32,7 @@ export async function registerSeriesRoutes(app: FastifyInstance) {
     const me = request.user as Me;
 
     const seriesList = await SeriesModel.find().sort({ order: 1, createdAt: -1 }).lean();
-    const rows = (await QuestionModel.find({ seriesId: { $ne: null }, ...visibleMatch(me) })
+    const rows = (await QuestionModel.find({ seriesId: { $ne: null }, deletedAt: null, ...visibleMatch(me) })
       .select('seriesId')
       .lean()) as Array<{ seriesId: unknown }>;
     const countMap = new Map<string, number>();
@@ -67,7 +67,7 @@ export async function registerSeriesRoutes(app: FastifyInstance) {
     const series = await SeriesModel.findById(params.id).lean();
     if (!series) return reply.status(404).send({ message: '系列不存在' });
 
-    const articles = (await QuestionModel.find({ seriesId: series._id, ...visibleMatch(me) })
+    const articles = (await QuestionModel.find({ seriesId: series._id, deletedAt: null, ...visibleMatch(me) })
       .sort({ order: 1, createdAt: 1 })
       .select('title visibility creatorName createdAt updatedAt')
       .lean()) as Array<{
@@ -191,7 +191,8 @@ export async function registerSeriesRoutes(app: FastifyInstance) {
     const ids = Array.isArray(body.questionIds) ? body.questionIds.filter((id) => isValidObjectId(id)) : [];
     if (!ids.length) return reply.status(400).send({ message: '请选择要添加的文章' });
 
-    const questions = await QuestionModel.find({ _id: { $in: ids } });
+    // 已进回收站的笔记视为不存在，不可加入系列
+    const questions = await QuestionModel.find({ _id: { $in: ids }, deletedAt: null });
     if (questions.length !== ids.length) {
       return reply.status(400).send({ message: '部分笔记不存在' });
     }
@@ -254,7 +255,7 @@ export async function registerSeriesRoutes(app: FastifyInstance) {
     const body = request.body as { questionIds?: string[] };
     const ids = Array.isArray(body.questionIds) ? body.questionIds : [];
     // 与目录列表一致：只对请求者可见的成员做集合校验，避免「管理员把他人私有文章入系后，成员永远无法排序」
-    const members = (await QuestionModel.find({ seriesId: series._id, ...visibleMatch(me) })
+    const members = (await QuestionModel.find({ seriesId: series._id, deletedAt: null, ...visibleMatch(me) })
       .select('_id')
       .lean()) as Array<{ _id: unknown }>;
     const memberIds = members.map((m) => String(m._id));

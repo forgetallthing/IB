@@ -270,7 +270,7 @@ function editQuestion(id?: string) {
 async function deleteQuestion(id: string) {
   const ok = await showConfirm({
     title: '删除笔记',
-    message: '删除后无法恢复，确定要删除这条笔记吗？',
+    message: '删除后笔记进入回收站，30 天内可恢复，确定删除这条笔记吗？',
     confirmText: '删除',
     danger: true,
   });

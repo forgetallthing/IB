@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
 import PageToolbar from '../components/PageToolbar.vue';
+import VersionDrawer from '../components/VersionDrawer.vue';
+import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
+import { useAuthStore } from '../stores/auth';
 
 // 详情页在 KeepAlive 中按 path 独立实例保活（App.vue keepAliveNames + isDetailPath key），
 // 滚动位置随 DOM 一起保留，无需手动记忆恢复
@@ -17,6 +20,7 @@ interface QuestionItem {
   content: string;
   tags: string[];
   difficulty: 'easy' | 'medium' | 'hard';
+  creatorId: string;
   creatorName: string;
   visibility: 'public' | 'private';
   type?: 'qa' | 'article';
@@ -28,12 +32,20 @@ interface QuestionItem {
 
 const route = useRoute();
 const router = useRouter();
+const auth = useAuthStore();
 const loading = ref(false);
-const { fail } = useToast();
+const { notice, fail } = useToast();
 const item = ref<QuestionItem | null>(null);
 const contentEl = ref<HTMLDivElement | null>(null);
 
 const difficultyLabels = { easy: '简单', medium: '中等', hard: '困难' } as const;
+
+const previewOptions = {
+  lang: 'zh_CN',
+  mode: 'light',
+  cdn: '/vditor',
+  hljs: { style: 'github', lineNumber: false },
+} as const;
 
 async function loadDetail() {
   loading.value = true;
@@ -42,12 +54,7 @@ async function loadDetail() {
     await nextTick();
     if (contentEl.value && item.value) {
       // 与列表/回想页一致，用 Vditor.preview 渲染：本地 /vditor 资源 + hljs 代码高亮
-      Vditor.preview(contentEl.value, item.value.content || '', {
-        lang: 'zh_CN',
-        mode: 'light',
-        cdn: '/vditor',
-        hljs: { style: 'github', lineNumber: false },
-      });
+      Vditor.preview(contentEl.value, item.value.content || '', previewOptions);
     }
   } catch (error) {
     fail(error instanceof Error ? error.message : '加载详情失败');
@@ -56,11 +63,34 @@ async function loadDetail() {
   }
 }
 
+// 保存/恢复后的静默刷新：不亮 loading，原地更新标题与正文
+async function silentReload() {
+  if (!item.value) return;
+  try {
+    item.value = await request<QuestionItem>(`/questions/${item.value.id}`);
+    await nextTick();
+    if (contentEl.value && item.value) {
+      Vditor.preview(contentEl.value, item.value.content || '', previewOptions);
+    }
+  } catch {
+    // 静默失败：保留现有内容
+  }
+}
+
 // 返回来源列表：从系列目录进入时回系列页，其余回笔记中心（vue-router 在 history.state.back 记录来源）
 function backToList() {
   if (typeof window.history.state?.back === 'string') router.back();
   else router.push('/questions');
 }
+
+// ===== 历史版本抽屉：渲染逻辑在 VersionDrawer 组件，此处仅控制显隐 =====
+const drawerOpen = ref(false);
+
+// 与编辑权限一致：仅创建者或管理员可查看/恢复历史版本
+const canViewVersions = computed(() => {
+  if (!item.value) return false;
+  return auth.user?.role === 'admin' || item.value.creatorId === auth.user?.id;
+});
 
 onMounted(loadDetail);
 </script>
@@ -75,6 +105,7 @@ onMounted(loadDetail);
       </div>
       <div class="header-actions">
         <button class="secondary" type="button" @click="backToList">返回列表</button>
+        <button v-if="item && canViewVersions" class="secondary" type="button" @click="drawerOpen = true">历史版本</button>
         <button v-if="item" class="secondary" type="button" @click="router.push(`/questions/edit?id=${item.id}`)">编辑</button>
       </div>
     </PageToolbar>
@@ -103,6 +134,14 @@ onMounted(loadDetail);
 
       <div ref="contentEl" class="content"></div>
     </article>
+
+    <!-- 历史版本抽屉：蒙版/列表/预览/恢复在 VersionDrawer 内渲染，恢复成功后静默刷新详情 -->
+    <VersionDrawer
+      v-if="drawerOpen && item"
+      :question-id="item.id"
+      @close="drawerOpen = false"
+      @restored="silentReload"
+    />
   </section>
 </template>
 

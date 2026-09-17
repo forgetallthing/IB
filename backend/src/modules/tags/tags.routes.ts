@@ -27,8 +27,9 @@ export async function registerTagRoutes(app: FastifyInstance) {
 
     const tags = await TagModel.find().sort({ displayOrder: 1, createdAt: -1 }).lean();
 
-    // 统计每个标签当前绑定的笔记数量（tags 存的是标签名字符串）
+    // 统计每个标签当前绑定的笔记数量（tags 存的是标签名字符串）；回收站中的笔记不计入
     const countRows = await QuestionModel.aggregate<{ _id: string; count: number }>([
+      { $match: { deletedAt: null } },
       { $unwind: '$tags' },
       { $group: { _id: '$tags', count: { $sum: 1 } } },
     ]);

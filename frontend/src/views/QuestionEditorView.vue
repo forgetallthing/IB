@@ -5,6 +5,7 @@ import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 import { request } from '../api';
 import PageToolbar from '../components/PageToolbar.vue';
+import VersionDrawer from '../components/VersionDrawer.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
@@ -220,8 +221,8 @@ async function loadTags() {
   }
 }
 
-async function loadQuestion(id: string) {
-  loading.value = true;
+async function loadQuestion(id: string, silent = false) {
+  if (!silent) loading.value = true;
   try {
     const item = await request<QuestionItem>(`/questions/${id}`);
     // 管理员可维护所有用户的笔记，普通用户只能维护自己创建的
@@ -266,6 +267,13 @@ async function onTypeChange() {
 function backToSource() {
   if (typeof window.history.state?.back === 'string') router.back();
   else router.push('/questions');
+}
+
+// ===== 历史版本：渲染在 VersionDrawer 组件，恢复成功后静默重拉同步到编辑器 =====
+const versionsOpen = ref(false);
+
+function reloadAfterRestore() {
+  if (form.id) loadQuestion(form.id, true);
 }
 
 async function save() {
@@ -362,6 +370,10 @@ onBeforeUnmount(() => {
       </div>
       <div class="header-actions">
         <button type="button" class="secondary" @click="backToSource">返回</button>
+        <button v-if="form.id" type="button" class="secondary" @click="versionsOpen = true">
+          <span class="btn-full">历史版本</span>
+          <span class="btn-mini">版本</span>
+        </button>
         <button type="button" class="secondary" @click="analyze" :disabled="analyzing">
           <span class="btn-full">{{ analyzing ? '分析中…' : 'AI 辅助' }}</span>
           <span class="btn-mini">{{ analyzing ? '分析中' : 'AI' }}</span>
@@ -439,6 +451,14 @@ onBeforeUnmount(() => {
         <div ref="contentEditorRef" class="content-editor"></div>
       </div>
     </section>
+
+    <!-- 历史版本抽屉：恢复成功后静默重拉笔记并同步到编辑器 -->
+    <VersionDrawer
+      v-if="versionsOpen && form.id"
+      :question-id="form.id"
+      @close="versionsOpen = false"
+      @restored="reloadAfterRestore"
+    />
   </section>
 </template>
 

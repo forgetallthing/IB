@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { request, requestBlob } from '../api';
 import PageToolbar from '../components/PageToolbar.vue';
+import TrashPanel from '../components/TrashPanel.vue';
 import { showConfirm } from '../composables/useConfirm';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
@@ -36,7 +37,7 @@ interface MeItem {
 const authStore = useAuthStore();
 const router = useRouter();
 const isAdmin = computed(() => authStore.user?.role === 'admin');
-const tab = ref<'profile' | 'users' | 'tags' | 'io'>('profile');
+const tab = ref<'profile' | 'trash' | 'users' | 'tags' | 'io'>('profile');
 const loading = ref(false);
 const { notice, fail } = useToast();
 const users = ref<UserItem[]>([]);
@@ -356,6 +357,7 @@ onMounted(refresh);
 
     <div class="tabs">
       <button class="secondary" :class="{ active: tab === 'profile' }" @click="tab = 'profile'">系统设置</button>
+      <button class="secondary" :class="{ active: tab === 'trash' }" @click="tab = 'trash'">回收站</button>
       <template v-if="isAdmin">
         <button class="secondary" :class="{ active: tab === 'users' }" @click="tab = 'users'">用户管理</button>
         <button class="secondary" :class="{ active: tab === 'tags' }" @click="tab = 'tags'">标签管理</button>
@@ -406,6 +408,8 @@ onMounted(refresh);
         <button class="danger" type="button" @click="logout">退出登录</button>
       </div>
     </article>
+
+    <TrashPanel v-else-if="tab === 'trash'" />
 
     <article v-else-if="tab === 'users'" class="panel">
       <h2>新增用户</h2>

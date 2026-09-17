@@ -4,6 +4,12 @@ import { QuestionModel } from '../../models/question.model.js';
 import { SeriesModel } from '../../models/series.model.js';
 import { QuizStateModel, levelWeight, autoLevelByDrawCount } from '../../models/quizState.model.js';
 import { QuizLogModel } from '../../models/quizLog.model.js';
+import {
+  QuestionVersionModel,
+  recordQuestionVersion,
+  questionContentEquals,
+} from '../../models/questionVersion.model.js';
+import { purgeQuestionsByIds } from '../../services/questionPurge.service.js';
 
 // 转义正则特殊字符：用户输入按字面子串匹配，避免非法正则报错与回溯慢查询
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -56,6 +62,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     }
 
     const filter: Record<string, unknown> = {};
+    // 回收站中的笔记不在任何列表里出现
+    filter.deletedAt = null;
     if (visibilityClause) {
       // 用 $and 承载可见性条件，避免与搜索的 $or 冲突
       filter.$and = [visibilityClause];
@@ -167,6 +175,9 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
         : me.role === 'admin'
           ? {}
           : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] };
+
+    // 回收站中的笔记不进抽题池
+    match.deletedAt = null;
 
     // 读与记分离：文章类型不进入每日回想候选池（缺 type 字段的存量笔记视为回想）
     match.type = { $ne: 'article' };
@@ -363,7 +374,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
 
   app.get('/api/questions/:id', async (request, reply) => {
     const params = request.params as { id: string };
-    const item = await QuestionModel.findById(params.id).lean();
+    // 回收站中的笔记不可读（恢复后重新可见）
+    const item = await QuestionModel.findOne({ _id: params.id, deletedAt: null }).lean();
     if (!item) return reply.status(404).send({ message: '笔记不存在' });
 
     // 与列表接口相同的可见性基线：私有笔记仅创建者和管理员可读
@@ -421,7 +433,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       type: 'qa' | 'article';
     }>;
 
-    const existing = await QuestionModel.findById(params.id);
+    const existing = await QuestionModel.findOne({ _id: params.id, deletedAt: null });
     if (!existing) return reply.status(404).send({ message: '笔记不存在' });
 
     const user = request.user as { sub?: string; username?: string; role?: string } | null;
@@ -430,10 +442,21 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       return reply.status(403).send({ message: '仅创建者或管理员可以维护该笔记' });
     }
 
-    if (body.title !== undefined) existing.title = body.title;
-    if (body.content !== undefined) existing.content = body.content;
-    if (body.tags !== undefined) existing.tags = body.tags;
-    if (body.difficulty !== undefined) existing.difficulty = body.difficulty;
+    // 版本快照：内容四字段（标题/正文/标签/难度）有实际变化时，先把旧内容存为历史版本再落新值；
+    // 「保存后留在当前页」产生的无变化重复保存不产生冗余版本
+    const next = {
+      title: body.title !== undefined ? body.title : existing.title,
+      content: body.content !== undefined ? body.content : existing.content,
+      tags: body.tags !== undefined ? body.tags : existing.tags ?? [],
+      difficulty: body.difficulty !== undefined ? body.difficulty : existing.difficulty,
+    };
+    if (!questionContentEquals(next, existing)) {
+      await recordQuestionVersion(existing, user ?? {}, 'edit');
+    }
+    existing.title = next.title;
+    existing.content = next.content;
+    existing.tags = next.tags;
+    existing.difficulty = next.difficulty;
     if (body.visibility !== undefined) existing.visibility = body.visibility;
     if (body.type !== undefined) {
       existing.type = body.type === 'article' ? 'article' : 'qa';
@@ -448,6 +471,8 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // 删除：默认软删除进回收站（保留 30 天，版本/回想权重/系列归属全保留，恢复即完整还原）；
+  // ?permanent=1 彻底删除（级联清理历史版本与回想权重，回想日志保留）
   app.delete('/api/questions/:id', async (request, reply) => {
     try {
       await request.jwtVerify();
@@ -456,15 +481,138 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     }
 
     const params = request.params as { id: string };
+    const query = request.query as { permanent?: string };
     const existing = await QuestionModel.findById(params.id);
     if (!existing) return reply.status(404).send({ message: '笔记不存在' });
 
-    const user = request.user as { sub?: string; role?: string } | null;
+    const user = request.user as { sub?: string; username?: string; role?: string } | null;
     if (user?.role !== 'admin' && String(existing.creatorId) !== String(user?.sub)) {
       return reply.status(403).send({ message: '仅创建者或管理员可以维护该笔记' });
     }
 
-    await existing.deleteOne();
+    if (query.permanent === '1' || query.permanent === 'true') {
+      await purgeQuestionsByIds([existing._id]);
+      return { ok: true, permanent: true };
+    }
+
+    existing.deletedAt = new Date();
+    await existing.save();
+    return { ok: true };
+  });
+
+  // 历史版本时间线：仅创建者或管理员可见（列表不含正文，全文单版本获取）
+  app.get('/api/questions/:id/versions', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const params = request.params as { id: string };
+    const existing = await QuestionModel.findOne({ _id: params.id, deletedAt: null }).lean();
+    if (!existing) return reply.status(404).send({ message: '笔记不存在' });
+
+    const me = request.user as { sub?: string; role?: string } | null;
+    if (me?.role !== 'admin' && String(existing.creatorId) !== String(me?.sub)) {
+      return reply.status(403).send({ message: '仅创建者或管理员可以查看历史版本' });
+    }
+
+    const rows = (await QuestionVersionModel.find({ questionId: existing._id })
+      .sort({ v: -1 })
+      .lean()) as Array<{
+      v: number;
+      title: string;
+      editorName: string;
+      reason: 'edit' | 'restore';
+      content: string;
+      createdAt: Date;
+    }>;
+
+    return {
+      items: rows.map((row) => ({
+        v: row.v,
+        title: row.title,
+        editorName: row.editorName,
+        reason: row.reason,
+        contentLength: row.content.length,
+        createdAt: row.createdAt,
+      })),
+    };
+  });
+
+  // 单版本全文（预览用）
+  app.get('/api/questions/:id/versions/:v', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const params = request.params as { id: string; v: string };
+    const versionNo = Number(params.v);
+    if (!Number.isInteger(versionNo) || versionNo < 1) {
+      return reply.status(400).send({ message: '版本号不合法' });
+    }
+
+    const existing = await QuestionModel.findOne({ _id: params.id, deletedAt: null }).lean();
+    if (!existing) return reply.status(404).send({ message: '笔记不存在' });
+
+    const me = request.user as { sub?: string; role?: string } | null;
+    if (me?.role !== 'admin' && String(existing.creatorId) !== String(me?.sub)) {
+      return reply.status(403).send({ message: '仅创建者或管理员可以查看历史版本' });
+    }
+
+    const version = await QuestionVersionModel.findOne({ questionId: existing._id, v: versionNo }).lean();
+    if (!version) return reply.status(404).send({ message: '版本不存在' });
+
+    return {
+      v: version.v,
+      title: version.title,
+      content: version.content,
+      tags: version.tags ?? [],
+      difficulty: version.difficulty,
+      editorName: version.editorName,
+      reason: version.reason,
+      createdAt: version.createdAt,
+    };
+  });
+
+  // 恢复历史版本：非破坏性——当前内容先存为新版本（reason=restore），再写回快照的内容四字段。
+  // 不恢复 visibility/type/seriesId：可见性不是内容演化，type 变更会牵动系列归属
+  app.post('/api/questions/:id/versions/:v/restore', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '登录已过期，请重新登录' });
+    }
+
+    const params = request.params as { id: string; v: string };
+    const versionNo = Number(params.v);
+    if (!Number.isInteger(versionNo) || versionNo < 1) {
+      return reply.status(400).send({ message: '版本号不合法' });
+    }
+
+    const existing = await QuestionModel.findOne({ _id: params.id, deletedAt: null });
+    if (!existing) return reply.status(404).send({ message: '笔记不存在' });
+
+    const user = request.user as { sub?: string; username?: string; role?: string } | null;
+    if (user?.role !== 'admin' && String(existing.creatorId) !== String(user?.sub)) {
+      return reply.status(403).send({ message: '仅创建者或管理员可以恢复历史版本' });
+    }
+
+    const version = await QuestionVersionModel.findOne({ questionId: existing._id, v: versionNo }).lean();
+    if (!version) return reply.status(404).send({ message: '版本不存在' });
+
+    if (questionContentEquals(version, existing)) {
+      return { ok: true, unchanged: true };
+    }
+
+    await recordQuestionVersion(existing, user ?? {}, 'restore');
+    existing.title = version.title;
+    existing.content = version.content;
+    existing.tags = version.tags ?? [];
+    existing.difficulty = version.difficulty;
+    await existing.save();
     return { ok: true };
   });
 }

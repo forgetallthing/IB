@@ -11,6 +11,7 @@ import { registerBackupRoutes } from './modules/backup/backup.routes.js';
 import { registerTagRoutes } from './modules/tags/tags.routes.js';
 import { registerSeriesRoutes } from './modules/series/series.routes.js';
 import { registerImageRoutes } from './modules/images/images.routes.js';
+import { registerTrashRoutes } from './modules/trash/trash.routes.js';
 
 export async function createApp() {
   const app = Fastify({
@@ -53,6 +54,7 @@ export async function createApp() {
   await registerTagRoutes(app);
   await registerSeriesRoutes(app);
   await registerImageRoutes(app);
+  await registerTrashRoutes(app);
 
   return app;
 }
