@@ -32,3 +32,18 @@ export const appConfig = {
   cozeBotId: process.env.COZE_BOT_ID ?? '',
   cozeApiBase: process.env.COZE_API_BASE ?? 'https://api.coze.cn',
 };
+
+// 生产环境启动校验：JWT_SECRET 必须显式配置且不得使用占位符/弱值，防止默认密钥上生产
+const JWT_SECRET_PLACEHOLDERS = new Set([
+  'replace-me',
+  'please-change-me',
+  'please-change-me-to-a-long-random-string',
+]);
+if (process.env.NODE_ENV === 'production') {
+  if (!appConfig.jwtSecret.trim() || JWT_SECRET_PLACEHOLDERS.has(appConfig.jwtSecret)) {
+    throw new Error('[config] 生产环境禁止使用默认 JWT_SECRET，请在环境变量中设置强随机值（如 openssl rand -hex 32 生成）');
+  }
+  if (appConfig.jwtSecret.length < 16) {
+    throw new Error('[config] JWT_SECRET 过短（至少 16 个字符），请更换为强随机值（如 openssl rand -hex 32 生成）');
+  }
+}
