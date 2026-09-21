@@ -12,6 +12,7 @@ import { registerTagRoutes } from './modules/tags/tags.routes.js';
 import { registerSeriesRoutes } from './modules/series/series.routes.js';
 import { registerImageRoutes } from './modules/images/images.routes.js';
 import { registerTrashRoutes } from './modules/trash/trash.routes.js';
+import { registerVoiceRoutes } from './modules/voice/voice.routes.js';
 
 export async function createApp() {
   const app = Fastify({
@@ -55,6 +56,7 @@ export async function createApp() {
   await registerSeriesRoutes(app);
   await registerImageRoutes(app);
   await registerTrashRoutes(app);
+  await registerVoiceRoutes(app);
 
   return app;
 }

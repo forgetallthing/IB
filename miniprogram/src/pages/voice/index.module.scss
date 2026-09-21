@@ -1,0 +1,230 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  padding: $spacing-md $page-padding calc(#{$spacing-xl} + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+// ========== 登录引导 ==========
+.loginCard {
+  margin-top: 160rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.loginText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+}
+
+.loginBtn {
+  @include button-reset;
+  height: $button-height-md;
+  padding: 0 $spacing-lg;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  color: $color-text-white;
+  font-size: $font-size-md;
+}
+
+.loginBtnText {
+  color: $color-text-white;
+}
+
+// ========== 连接状态卡 ==========
+.statusCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  background-color: $color-bg-card;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: $radius-round;
+}
+
+.dotChecking {
+  background-color: #94a3b8;
+}
+
+.dotOn {
+  background-color: #0d9488;
+  animation: dotPulse 1.6s ease-in-out infinite;
+}
+
+.dotOff {
+  background-color: #cbd5e1;
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.statusText {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.statusHint {
+  font-size: $font-size-xs;
+  color: $color-primary-dark;
+  padding: 8rpx 0 8rpx $spacing-md;
+}
+
+// ========== 转写内容区 ==========
+.transcript {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding-bottom: 320rpx; // 给底部固定录音栏留空间
+}
+
+.empty {
+  margin-top: 120rpx;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: 0 $spacing-lg;
+}
+
+.emptyText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  text-align: center;
+}
+
+.segText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-loose;
+}
+
+.partialText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}
+
+// ========== 底部固定录音栏 ==========
+.recBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: $spacing-md 0 calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.recTime {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-xs;
+}
+
+.recTimeDot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: $radius-round;
+  background-color: #e11d48;
+  animation: dotPulse 1.2s ease-in-out infinite;
+}
+
+.recTimeText {
+  font-size: $font-size-xs;
+  color: #e11d48;
+  font-variant-numeric: tabular-nums;
+}
+
+.recBtn {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  box-shadow: 0 8rpx 24rpx rgba(13, 148, 136, 0.35);
+  @include flex-center;
+  transition: transform $transition-fast;
+
+  &:active {
+    transform: scale(0.94);
+  }
+}
+
+.recBtnActive {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  box-shadow: 0 8rpx 24rpx rgba(225, 29, 72, 0.35);
+}
+
+.recIcon {
+  @include flex-center;
+}
+
+// 麦克风简形（CSS 绘制）
+.recMic {
+  position: relative;
+  width: 44rpx;
+  height: 44rpx;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 10rpx;
+    top: 0;
+    width: 24rpx;
+    height: 40rpx;
+    border-radius: 20rpx;
+    background: #ffffff;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 18rpx;
+    width: 44rpx;
+    height: 26rpx;
+    border: 4rpx solid #ffffff;
+    border-top: none;
+    border-radius: 0 0 22rpx 22rpx;
+    box-sizing: border-box;
+  }
+}
+
+// 停止方块
+.recStop {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 8rpx;
+  background: #ffffff;
+}
+
+.recLabel {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}

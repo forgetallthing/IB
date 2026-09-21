@@ -216,3 +216,16 @@ export function analyzeAi(payload: { title: string; content: string }) {
 export function aiReview(payload: { title: string; answer: string }) {
   return request<{ analysis: string }>('ai-review', 'POST', '/api/ai/review', payload);
 }
+
+// ========== Voice（录音转写流） ==========
+export interface VoiceStreamResult {
+  /** 送达的 Web 端连接数；0 表示每日回想页面未打开，内容已被丢弃 */
+  delivered: number;
+  /** 仅 probe 请求返回：同账号的 Web 端每日回想是否在线 */
+  online?: boolean;
+}
+
+/** 推送一段语音转写文字到同账号的 Web 端每日回想页（text 省略且 probe=true 时仅探测在线状态） */
+export function pushVoiceStream(payload: { text?: string; isFinal?: boolean; probe?: boolean }) {
+  return request<VoiceStreamResult>('voice-stream', 'POST', '/api/voice/stream', payload);
+}

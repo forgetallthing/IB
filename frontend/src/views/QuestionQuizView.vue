@@ -8,6 +8,7 @@ import PageToolbar from '../components/PageToolbar.vue';
 import { useToast } from '../composables/useToast';
 import { useAuthStore } from '../stores/auth';
 import { quizDirty } from '../stores/dataDirty';
+import { useVoiceStream } from '../composables/useVoiceStream';
 import FilterCheckGroup, { type CheckOption } from '../components/FilterCheckGroup.vue';
 
 defineOptions({ name: 'QuestionQuizView' });
@@ -185,7 +186,40 @@ function initMyEditor() {
 
 function clearMyAnswer() {
   if (myVditor && myEditorReady) myVditor.setValue('');
+  voiceBase = '';
+  voicePartial = '';
 }
+
+// ===== 小程序「录音」tab 的语音转写流（同账号同时在线时实时写入作答） =====
+let voiceBase = ''; // 已确认（整句完成）并反映在编辑器中的听写文本
+let voicePartial = ''; // 当前句的中间识别结果
+
+function handleVoiceText(text: string, isFinal: boolean) {
+  if (!myVditor || !myEditorReady) return;
+  const compose = (base: string, partial: string) =>
+    partial ? (base ? `${base}\n\n${partial}` : partial) : base;
+  const expected = compose(voiceBase, voicePartial);
+  const current = myVditor.getValue();
+
+  if (current === expected || current === voiceBase) {
+    // 编辑器内容与听写流一致（用户未手动干预）：当前句实时替换
+    if (isFinal) {
+      voiceBase = compose(voiceBase, text);
+      voicePartial = '';
+    } else {
+      voicePartial = text;
+    }
+    myVditor.setValue(compose(voiceBase, voicePartial));
+  } else if (isFinal) {
+    // 用户已手动编辑过：中间结果不写入，整句确认后追加到末尾，避免覆盖手打内容
+    voiceBase = compose(voiceBase, text);
+    voicePartial = '';
+    const merged = current.replace(/\s+$/, '');
+    myVditor.setValue(merged ? `${merged}\n\n${text}` : text);
+  }
+}
+
+const { connected: voiceConnected } = useVoiceStream(handleVoiceText);
 
 async function drawQuestion(excludeId?: string) {
   loading.value = true;
@@ -411,7 +445,10 @@ onBeforeUnmount(() => {
         </section>
 
         <section class="panel side input-side">
-          <p class="side-label">我的作答</p>
+          <p class="side-label">
+            我的作答
+            <span v-if="voiceConnected" class="voice-badge"><i></i>手机语音输入中</span>
+          </p>
           <div ref="myEditorRef" class="my-editor"></div>
         </section>
       </div>
@@ -531,6 +568,35 @@ onBeforeUnmount(() => {
   top: 0;
   background: var(--surface);
   z-index: 1;
+}
+
+/* 手机语音输入状态徽标：teal 小圆点 + 轻文字，不占额外行 */
+.voice-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  font-size: 11px;
+  font-weight: 500;
+  color: #0d9488;
+  vertical-align: 1px;
+}
+
+.voice-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0d9488;
+  animation: voice-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 
 /* 详情面板头部行：标题 + 编辑按钮，行级 sticky（覆盖 label 自身的 sticky） */
