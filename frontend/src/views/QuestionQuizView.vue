@@ -282,6 +282,58 @@ async function runAiReview() {
   }
 }
 
+// ===== 复制问答模板：粘贴到豆包等 AI，让它以面试官视角点评作答 =====
+// navigator.clipboard 在部分手机浏览器/WebView 不可用，降级 execCommand
+function fallbackCopy(text: string): boolean {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+  return ok;
+}
+
+async function copyForAiReview() {
+  if (!question.value) return;
+  const answer = myVditor && myEditorReady ? myVditor.getValue().trim() : '';
+  if (!answer) {
+    fail('请先在「我的作答」写下你的回答');
+    return;
+  }
+  const tags = question.value.tags.length ? question.value.tags.join('、') : '无';
+  const template = [
+    '你现在是一名严格的面试官，正在对我进行模拟面试。请只针对下面这道面试题和我给出的作答进行评判，按真实面试标准从严把关，不要客套。',
+    '',
+    '【面试题】',
+    question.value.title.trim(),
+    `（难度：${difficultyLabels[question.value.difficulty]}，标签：${tags}）`,
+    '',
+    '【我的作答】',
+    answer,
+    '',
+    '请按以下结构输出点评：',
+    '1. 总评：满分 10 分打分，并用一句话判断是否达到录用标准；',
+    '2. 做得好的地方：逐条列出，没有就写「无」；',
+    '3. 问题与遗漏：逐条指出错误、不严谨或缺失的关键点，并说明为什么重要；',
+    '4. 期望的回答：给出你心目中的参考答案要点，方便我对照补齐；',
+    '5. 追问预测：列出面试官大概率会追问的 1~2 个问题。',
+  ].join('\n');
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(template);
+    } else if (!fallbackCopy(template)) {
+      throw new Error('copy failed');
+    }
+    notice('已复制');
+  } catch {
+    fail('复制失败，请手动复制');
+  }
+}
+
 function nextQuestion() {
   drawQuestion(question.value?.id);
 }
@@ -462,10 +514,24 @@ onBeforeUnmount(() => {
         </section>
 
         <section class="panel side input-side">
-          <p class="side-label">
-            我的作答
-            <span v-if="voiceActive" class="voice-badge"><i></i>手机语音输入中</span>
-          </p>
+          <div class="side-label-row">
+            <p class="side-label">
+              我的作答
+              <span v-if="voiceActive" class="voice-badge"><i></i>手机语音输入中</span>
+            </p>
+            <button
+              type="button"
+              class="copy-btn"
+              title="复制题目与作答，粘贴到豆包等 AI 让它以面试官视角点评"
+              aria-label="复制问答给 AI 点评"
+              @click="copyForAiReview"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
           <div ref="myEditorRef" class="my-editor"></div>
         </section>
       </div>
@@ -645,6 +711,31 @@ onBeforeUnmount(() => {
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s ease;
+}
+
+/* 复制问答图标按钮：teal 圆形胶囊，贴在「我的作答」标签行右侧 */
+.copy-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.08);
+  color: #0f766e;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+}
+
+/* 覆盖全局 button:hover/:active 的 teal 实心背景与阴影，保持浅色胶囊风格 */
+.copy-btn:hover,
+.copy-btn:active {
+  box-shadow: none;
+  background: rgba(13, 148, 136, 0.08);
 }
 
 .ai-placeholder {
@@ -895,6 +986,10 @@ onBeforeUnmount(() => {
   }
 
   .edit-jump:hover {
+    background: rgba(13, 148, 136, 0.16);
+  }
+
+  .copy-btn:hover {
     background: rgba(13, 148, 136, 0.16);
   }
 }
