@@ -13,6 +13,7 @@
 - 支持数据看板：回想热力图、趋势、分布与薄弱标签统计。
 - 支持 AI 辅助生成标签、摘要和难度建议。
 - 支持导入、导出和 Docker 部署。
+- 支持录音转文字（语音听写）：小程序录音经后端 SSE 中转，实时写入同账号 Web 端每日回想作答框。
 - 支持 PC、Pad 和手机端响应式适配。
 
 ### 1.2 非目标
@@ -78,6 +79,7 @@ flowchart LR
 - AI 模块：调用 DeepSeek 做摘要、标签和难度建议。
 - Import/Export 模块：导入导出题库。
 - UI 模块：响应式布局和答案折叠交互。
+- Voice 模块：语音转写流中转（POST 推送 + SSE 订阅，按账号内存路由）。
 
 ## 4. 数据模型
 
@@ -496,6 +498,21 @@ autoLevelByDrawCount(drawCount):
 - body：`{ seriesIds: string[] }`（全量新顺序）。
 - 按数组下标写入 `Series.order`。
 
+### 6.9 Voice（语音流中转）
+
+#### POST /api/voice/stream
+
+- 仅登录。body：`{ text?, isFinal?, probe?, event?: 'start' | 'stop' }`。
+- 按 userId 内存路由到该账号的 Web 端 SSE 连接，不落库；`delivered` 返回送达连接数，0 = Web 端每日回想未打开，内容直接丢弃。
+- `probe: true` 不转发，仅探测同账号 Web 端每日回想是否在线（返回 `online`）。
+- `event`：录音会话控制事件（start/stop），服务端以内存 `liveSessions` 记录录音中账号并转发。
+
+#### GET /api/voice/stream
+
+- SSE 长连接，token 走 query（EventSource 无法携带请求头）。
+- 接入时先下发一帧当前录音状态（`event: start|stop`），避免 Web 端迟入状态不同步。
+- 心跳保活；连接断开自动移除。改协议需小程序/后端/Web 三端同步。
+
 ## 7. 搜索与筛选实现
 
 ### 7.1 查询能力
@@ -649,6 +666,7 @@ project/
 - 系列增删改查与成员文章管理测试（权限、类型校验、解绑与排序）。
 - 导入导出测试。
 - AI 失败降级测试。
+- 语音流中转测试（text/event/probe 路由、离线丢弃与 delivered 计数、SSE 接入状态帧）。
 - 移动端响应式测试。
 - 文本展示与转义测试。
 
@@ -684,7 +702,7 @@ project/
 ```mermaid
 flowchart LR
   MP[微信小程序 Taro] -->|Taro.request + JWT| Api[Node.js API]
-  Web[Vue3 Web 前端] --> Api
+  Web[Vue3 Web 前端] -->|HTTP + EventSource SSE| Api
   Api --> Mongo[(MongoDB)]
   Api --> WX[微信 jscode2session]
   Api --> AI[DeepSeek API]
@@ -713,6 +731,7 @@ flowchart LR
 | 笔记中心 | pages/notes | tabBar | 搜索、多选筛选（本地缓存 `ib_mp_question_filters`）、折叠展开、下拉刷新、分页 |
 | 标签 | pages/tags | tabBar | 标签云浏览、点击跳转笔记筛选；管理员入口 |
 | 我的 | pages/mine | tabBar | 用户信息、设置/管理入口、未登录引导 |
+| 录音 | pages/voice | tabBar | 录音转文字（微信同声传译插件），实时同步 Web 端每日回想作答框 |
 | 登录 | pages/login | 二级 | 微信一键登录 + 账号密码登录 |
 | 笔记编辑 | pages/editor | 二级 | 新增/编辑/删除、标签难度可见性、AI 建议一键应用 |
 | 系统设置 | pages/settings | 二级 | 用户名/密码修改、退出登录、管理员入口 |
@@ -727,3 +746,12 @@ flowchart LR
 - 小程序构建产物独立（`npm run build:weapp`），通过微信开发者平台上传发布；服务端无需为小程序增加容器。
 - 后端部署需在 `.env` 中按需补充 `WECHAT_APPID`、`WECHAT_SECRET`（保留 `.env` 不被部署覆盖的既有约定）。
 - H5 预览使用 mock 数据，不依赖后端；微信登录仅真机/微信开发者工具可用。
+
+### 17.8 录音转文字（微信同声传译插件）
+
+- 插件：WechatSI（provider `wx069ba97219f66d99`，0.3.10），`app.config.ts` 的 `plugins.WechatSI` 声明。
+- 加载：`requirePlugin` 由运行时注入到模块作用域，必须直接调用裸标识符；`Taro.requirePlugin` 仅有类型声明无运行时实现，`globalThis.requirePlugin` 真机不存在。
+- 回调为「属性赋值」式（`manager.onRecognize = fn`），manager 预置的同名属性是默认空操作函数；无 `onResult` 回调，整句结果在 `onStop` 的 `res.result`；单段最长 60s，`onStop` 后自动续录保持会话连续（上限 20 段）。
+- 推送节流：partial 每 800ms 推一次（防打爆后端限流）；整段落定以 `isFinal: true` 推送。
+- 会话事件：开始/结束录音发 `event: start|stop`，Web 端凭此点亮/熄灭「手机语音输入中」徽标，并以作答框现有内容（空白归一化比较防止 getValue() 序列化差异误判）为基底追加写入。
+- 真机需在小程序后台「用户隐私保护指引」声明「麦克风」，否则授权静默失败（模拟器看不出来）；识别问题用真机调试看 `[Voice]` 日志。
