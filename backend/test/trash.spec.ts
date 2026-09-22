@@ -56,10 +56,18 @@ describe('trash (soft delete / restore / purge)', () => {
     expect(del.statusCode).toBe(200);
     expect(del.json().permanent).toBeUndefined();
 
-    const list = await app.inject({ method: 'GET', url: '/api/questions' });
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/questions',
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(list.json().items.some((i: any) => i.id === id)).toBe(false);
 
-    const detail = await app.inject({ method: 'GET', url: `/api/questions/${id}` });
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/questions/${id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(detail.statusCode).toBe(404);
 
     const trash = await app.inject({
@@ -86,7 +94,11 @@ describe('trash (soft delete / restore / purge)', () => {
     });
     expect(restore.statusCode).toBe(200);
 
-    const list = await app.inject({ method: 'GET', url: '/api/questions' });
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/questions',
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(list.json().items.some((i: any) => i.id === id)).toBe(true);
     const trash = await app.inject({
       method: 'GET',
@@ -227,7 +239,11 @@ describe('question versions', () => {
     });
     expect(restore.statusCode).toBe(200);
 
-    const detail = await app.inject({ method: 'GET', url: `/api/questions/${id}` });
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/questions/${id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(detail.json().title).toBe('版本笔记');
     expect(detail.json().content).toBe('v1 内容');
 

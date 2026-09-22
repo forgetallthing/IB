@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { connectDatabase, stopInMemoryDatabase } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { seedDefaultAdmin } from '../src/bootstrap/seed-admin.js';
@@ -56,13 +56,21 @@ describe('questions CRUD', () => {
   }, 60000);
 
   it('list notes includes created', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/questions' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/questions',
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().items.some((i: any) => i.id === createdId)).toBe(true);
   }, 60000);
 
   it('get note by id', async () => {
-    const res = await app.inject({ method: 'GET', url: `/api/questions/${createdId}` });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/questions/${createdId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().id).toBe(createdId);
     expect(res.json().title).toBe('示例笔记');
@@ -76,7 +84,11 @@ describe('questions CRUD', () => {
       payload: { title: '更新标题' },
     });
     expect(res.statusCode).toBe(200);
-    const getRes = await app.inject({ method: 'GET', url: `/api/questions/${createdId}` });
+    const getRes = await app.inject({
+      method: 'GET',
+      url: `/api/questions/${createdId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(getRes.json().title).toBe('更新标题');
   }, 60000);
 
@@ -98,7 +110,11 @@ describe('questions CRUD', () => {
   }, 120000);
 
   it('filter notes by creator name', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/questions?creatorName=admin' });
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/questions?creatorName=admin',
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(res.statusCode).toBe(200);
     expect(res.json().items.length).toBeGreaterThan(0);
   }, 60000);

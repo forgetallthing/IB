@@ -18,7 +18,7 @@
 - JWT_SECRET 禁止默认值 'replace-me' 上生产（启动时校验）
 - 管理功能（用户管理/标签管理/整库备份）仅管理员：前端隐藏 tab 之外，后端必须再做 JWT + 角色校验
 - 导入导出已改为整库备份 `GET /api/backup/export`（spawn mongodump --archive --gzip，仅管理员），导入功能暂未实现
-- `GET /api/questions` 可见性过滤：前端路由守卫强制游客先登录（产品上游客看不到任何内容）；API 层兜底过滤——未登录仅 public，登录用户 public + 自己的，admin 全部
+- 笔记访问权限（硬限制）：游客（未登录）在 API 层直接 401，不能访问任何笔记——`GET /api/questions`、`/api/questions/random`、`/api/questions/:id` 均要求登录，无 public 兜底；登录用户可见 public + 自己的，admin 全部。`/api/images/:id` 保持公开（Markdown `<img>` 无法携带 Authorization 头）
 - 敏感接口（如登录）用 @fastify/rate-limit 限流，`global: false` 按路由启用；app.ts 已设 `trustProxy: true`
 - 聚合操作符须兼容本地 MongoDB 4.2：禁用 4.4+ 的 `$first`/`$last` 数组操作符，用 `$arrayElemAt: [expr, 0]` 代替；测试用内存库是 7.x，测不出此差异
 - 图片存 GridFS（`/api/images`），清理走引用扫描 GC（dry-run 先行）

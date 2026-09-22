@@ -15,7 +15,7 @@ import { purgeQuestionsByIds } from '../../services/questionPurge.service.js';
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export async function registerQuestionRoutes(app: FastifyInstance) {
-  app.get('/api/questions', async (request) => {
+  app.get('/api/questions', async (request, reply) => {
     const query = request.query as {
       q?: string;
       qf?: 'title' | 'content';
@@ -29,14 +29,14 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       limit?: string;
     };
 
-    // 可见性基线：未登录仅 public；登录的普通用户可见 public + 自己创建的；管理员全部可见
-    let me: { sub?: string; role?: string } | null = null;
+    // 笔记访问硬限制：游客（未登录）直接 401，不再提供 public 兜底；
+    // 登录的普通用户可见 public + 自己创建的，管理员全部可见
     try {
       await request.jwtVerify();
-      me = request.user as { sub?: string; role?: string };
     } catch {
-      // 游客
+      return reply.status(401).send({ message: '请先登录后访问笔记' });
     }
+    const me = request.user as { sub?: string; role?: string };
 
     const requested = query.visibility
       ? Array.isArray(query.visibility)
@@ -45,9 +45,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       : null;
 
     let visibilityClause: Record<string, unknown> | null = null;
-    if (!me) {
-      visibilityClause = { visibility: 'public' };
-    } else if (me.role !== 'admin') {
+    if (me.role !== 'admin') {
       // 与显式筛选取交集：public 直接可见，private 仅限自己创建的
       if (requested) {
         const clauses: Record<string, unknown>[] = [];
@@ -150,18 +148,14 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     };
   });
 
-  // 随机抽题：与列表接口相同的可见性基线；excludeId 供"再来一篇"避开当前题。
-  // 权重规则：登录用户按 出现次数 自动降权（次数越多权重越低、没出现过的优先），
-  // 自评反馈直接调整出现次数；「完全掌握」通过自评设置，不再推送。
-  // 注意：抽题本身不计数；点击对照回忆自评选项才算一次完整回想（quiz-feedback 中记录回想日志，反馈本身继续调整出现次数）。
+  // 随机抽题：仅登录用户可用（游客 401）；excludeId 供"再来一篇"避开当前题。
   app.get('/api/questions/random', async (request, reply) => {
-    let me: { sub?: string; role?: string } | null = null;
     try {
       await request.jwtVerify();
-      me = request.user as { sub?: string; role?: string };
     } catch {
-      // 游客
+      return reply.status(401).send({ message: '请先登录后使用每日回想' });
     }
+    const me = request.user as { sub?: string; role?: string };
 
     const query = request.query as {
       excludeId?: string;
@@ -170,11 +164,7 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     };
 
     const match: Record<string, unknown> =
-      !me
-        ? { visibility: 'public' }
-        : me.role === 'admin'
-          ? {}
-          : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] };
+      me.role === 'admin' ? {} : { $or: [{ visibility: 'public' }, { creatorId: String(me.sub) }] };
 
     // 回收站中的笔记不进抽题池
     match.deletedAt = null;
@@ -198,35 +188,25 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
     type Candidate = { id: string; drawCount: number; mastered: boolean };
     let candidates: Candidate[] = [];
 
-    if (me) {
-      // 登录用户：两步批量查询代替逐文档 $lookup——候选 2000+ 时 $lookup 子管道实测 1.4s+，
-      // 改为 先取候选 id 再按 {userId, questionId $in} 批量查回想状态（命中 quizstates 联合唯一索引，毫秒级）
-      const userIdObj = new Types.ObjectId(me.sub);
-      const rows = (await QuestionModel.find(match).select('_id').lean()) as Array<{ _id: unknown }>;
-      const states = (await QuizStateModel.find({
-        userId: userIdObj,
-        questionId: { $in: rows.map((row) => row._id) },
-      })
-        .select('questionId drawCount mastered')
-        .lean()) as Array<{ questionId: unknown; drawCount?: number; mastered?: boolean }>;
-      const stateMap = new Map(states.map((state) => [String(state.questionId), state]));
-      candidates = rows.map((row) => {
-        const state = stateMap.get(String(row._id));
-        return {
-          id: String(row._id),
-          drawCount: state?.drawCount ?? 0,
-          mastered: state?.mastered === true,
-        };
-      });
-    } else {
-      // 游客：没有个人权重，全部按"优先推荐"等概率抽取
-      const rows = await QuestionModel.find(match).select('_id').lean();
-      candidates = (rows as Array<{ _id: unknown }>).map((row) => ({
+    // 两步批量查询代替逐文档 $lookup——候选 2000+ 时 $lookup 子管道实测 1.4s+，
+    // 改为 先取候选 id 再按 {userId, questionId $in} 批量查回想状态（命中 quizstates 联合唯一索引，毫秒级）
+    const userIdObj = new Types.ObjectId(me.sub);
+    const rows = (await QuestionModel.find(match).select('_id').lean()) as Array<{ _id: unknown }>;
+    const states = (await QuizStateModel.find({
+      userId: userIdObj,
+      questionId: { $in: rows.map((row) => row._id) },
+    })
+      .select('questionId drawCount mastered')
+      .lean()) as Array<{ questionId: unknown; drawCount?: number; mastered?: boolean }>;
+    const stateMap = new Map(states.map((state) => [String(state.questionId), state]));
+    candidates = rows.map((row) => {
+      const state = stateMap.get(String(row._id));
+      return {
         id: String(row._id),
-        drawCount: 0,
-        mastered: false,
-      }));
-    }
+        drawCount: state?.drawCount ?? 0,
+        mastered: state?.mastered === true,
+      };
+    });
 
     // 完全掌握不进入候选；"再来一篇"时避开当前题，仅剩一篇可推时允许重复
     let pool = candidates.filter((candidate) => !candidate.mastered);
@@ -338,8 +318,6 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
       content?: string;
       tags?: string[];
       difficulty?: 'easy' | 'medium' | 'hard';
-      creatorId?: string;
-      creatorName?: string;
       visibility?: 'public' | 'private';
       type?: 'qa' | 'article';
       source?: string;
@@ -354,13 +332,14 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
 
     const user = request.user as { sub?: string; username?: string; role?: string } | null;
 
+    // 归属信息一律取自 JWT，忽略请求体里的 creatorId/creatorName，防止伪造他人署名
     const question = await QuestionModel.create({
       title: body.title,
       content: body.content,
       tags: body.tags ?? [],
       difficulty: body.difficulty ?? 'medium',
-      creatorId: body.creatorId ?? (user?.sub ? user.sub : null),
-      creatorName: body.creatorName ?? (user?.username ? user.username : 'unknown'),
+      creatorId: user?.sub ?? null,
+      creatorName: user?.username ?? 'unknown',
       visibility: body.visibility ?? 'public',
       type: body.type === 'article' ? 'article' : 'qa',
       source: body.source,
@@ -374,19 +353,21 @@ export async function registerQuestionRoutes(app: FastifyInstance) {
 
   app.get('/api/questions/:id', async (request, reply) => {
     const params = request.params as { id: string };
+
+    // 笔记访问硬限制：游客（未登录）直接 401，public 也不再对游客开放
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ message: '请先登录后访问笔记' });
+    }
+    const me = request.user as { sub?: string; role?: string };
+
     // 回收站中的笔记不可读（恢复后重新可见）
     const item = await QuestionModel.findOne({ _id: params.id, deletedAt: null }).lean();
     if (!item) return reply.status(404).send({ message: '笔记不存在' });
 
-    // 与列表接口相同的可见性基线：私有笔记仅创建者和管理员可读
-    let me: { sub?: string; role?: string } | null = null;
-    try {
-      await request.jwtVerify();
-      me = request.user as { sub?: string; role?: string };
-    } catch {
-      // 游客
-    }
-    if (item.visibility === 'private' && me?.role !== 'admin' && String(item.creatorId) !== String(me?.sub)) {
+    // 私有笔记仅创建者和管理员可读
+    if (item.visibility === 'private' && me.role !== 'admin' && String(item.creatorId) !== String(me.sub)) {
       return reply.status(403).send({ message: '仅创建者或管理员可以查看该笔记' });
     }
 

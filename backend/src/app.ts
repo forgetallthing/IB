@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { appConfig } from './config.js';
+import { UserModel } from './models/user.model.js';
 import { registerAuthRoutes } from './modules/auth/auth.routes.js';
 import { registerUserRoutes } from './modules/users/users.routes.js';
 import { registerQuestionRoutes } from './modules/questions/questions.routes.js';
@@ -40,6 +41,28 @@ export async function createApp() {
 
   await app.register(jwt, {
     secret: appConfig.jwtSecret,
+  });
+
+  // 登录态统一复核：token 暂不设过期时间（产品决定），因此每次携带 Bearer token 的请求
+  // 都回查数据库中的最新 status 与 role——禁用/降权立即生效，杜绝「禁用后旧 token 永久可用」。
+  // 未携带 token 的请求直接放行，由各路由自行决定游客行为；无效 token 同样交由各路由处理
+  // （公开接口按游客兜底过滤，受保护路由返回 401）。
+  app.addHook('preHandler', async (request, reply) => {
+    const auth = request.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) return;
+    try {
+      await request.jwtVerify();
+    } catch {
+      return;
+    }
+    const claims = request.user as { sub?: string; role?: string; username?: string };
+    if (!claims.sub) return;
+    const user = await UserModel.findById(claims.sub).select('username role status').lean();
+    if (!user || user.status !== 'active') {
+      return reply.status(401).send({ message: '账号已被禁用或不存在，请联系管理员' });
+    }
+    // 以数据库中的最新值覆盖 token 内固化 claims，防止降权/改名后旧 token 继续生效
+    request.user = { ...claims, role: user.role, username: user.username };
   });
 
   app.get('/api/health', async () => ({
