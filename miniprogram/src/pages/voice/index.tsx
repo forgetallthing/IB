@@ -49,6 +49,8 @@ const VoicePage: React.FC = () => {
   const [segments, setSegments] = useState<string[]>([]);
   const [partial, setPartial] = useState('');
   const [seconds, setSeconds] = useState(0);
+  // 刚点结束、插件 onStop 尚未把整段落下来的空窗期：压住空状态提示，避免闪烁
+  const [awaitResult, setAwaitResult] = useState(false);
 
   const managerRef = useRef<any>(null);
   const recordingRef = useRef(false);
@@ -114,6 +116,7 @@ const VoicePage: React.FC = () => {
     recordingRef.current = false;
     setRecording(false);
     setPartial('');
+    setAwaitResult(true);
     pushEvent('stop');
   }, [stopTimer, pushEvent]);
 
@@ -149,6 +152,8 @@ const VoicePage: React.FC = () => {
     });
 
     bind('onStop', (res: any) => {
+      // 整段结果已落定（无论有无文字），结束「等待结果」空窗期
+      setAwaitResult(false);
       // 一段录音结束：最终识别文本在 res.result，无论是否续录都先落段
       const text = String(res?.result ?? '').trim();
       if (text) {
@@ -168,6 +173,7 @@ const VoicePage: React.FC = () => {
 
     bind('onError', (res: any) => {
       console.error('[Voice] 语音识别错误:', res);
+      setAwaitResult(false);
       finishRecording();
       Taro.showToast({ title: '语音识别出错，请重试', icon: 'none' });
     });
@@ -260,7 +266,7 @@ const VoicePage: React.FC = () => {
 
       {/* 实时转写内容（录音中当前句 + 历史定稿段落） */}
       <View className={styles.transcript}>
-        {segments.length === 0 && !partial && !recording && (
+        {segments.length === 0 && !partial && !recording && !awaitResult && (
           <View className={styles.empty}>
             <Text className={styles.emptyText}>
               点按下方按钮开始录音，识别的文字会实时同步到电脑端「每日回想」的作答框。
