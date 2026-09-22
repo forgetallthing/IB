@@ -96,7 +96,7 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  padding-bottom: 320rpx; // 给底部固定录音栏留空间
+  padding-bottom: 420rpx; // 给底部固定录音栏（含实时字幕卡）留空间
 }
 
 .empty {
@@ -117,12 +117,6 @@
 .segText {
   font-size: $font-size-md;
   color: $color-text-primary;
-  line-height: $line-height-loose;
-}
-
-.partialText {
-  font-size: $font-size-md;
-  color: $color-text-secondary;
   line-height: $line-height-loose;
 }
 
@@ -162,6 +156,34 @@
   font-variant-numeric: tabular-nums;
 }
 
+// 录音中实时字幕卡（按钮上方，显示正在说的话）
+.liveCard {
+  width: 640rpx;
+  max-height: 200rpx;
+  box-sizing: border-box;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  background: rgba(13, 148, 136, 0.08);
+  border: 1rpx solid rgba(13, 148, 136, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: scroll;
+}
+
+.liveText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-loose;
+  text-align: center;
+  word-break: break-all;
+}
+
+.livePlaceholder {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
 .recBtn {
   width: 128rpx;
   height: 128rpx;
@@ -185,35 +207,45 @@
   @include flex-center;
 }
 
-// 麦克风简形（CSS 绘制）
+// 麦克风简形（显式 View 结构，纵向 flex 居中，避免伪元素错位）
 .recMic {
-  position: relative;
-  width: 44rpx;
-  height: 44rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-  &::before {
-    content: '';
-    position: absolute;
-    left: 10rpx;
-    top: 0;
-    width: 24rpx;
-    height: 40rpx;
-    border-radius: 20rpx;
-    background: #ffffff;
-  }
+// 拾音体（胶囊）
+.micBody {
+  width: 22rpx;
+  height: 38rpx;
+  border-radius: 11rpx;
+  background: #ffffff;
+}
 
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 18rpx;
-    width: 44rpx;
-    height: 26rpx;
-    border: 4rpx solid #ffffff;
-    border-top: none;
-    border-radius: 0 0 22rpx 22rpx;
-    box-sizing: border-box;
-  }
+// 下方 U 形拾音弧
+.micArc {
+  width: 40rpx;
+  height: 20rpx;
+  border: 4rpx solid #ffffff;
+  border-top: none;
+  border-radius: 0 0 20rpx 20rpx;
+  box-sizing: border-box;
+  margin-top: -2rpx;
+}
+
+// 音杆
+.micStem {
+  width: 4rpx;
+  height: 8rpx;
+  background: #ffffff;
+}
+
+// 底座
+.micBase {
+  width: 26rpx;
+  height: 4rpx;
+  border-radius: 2rpx;
+  background: #ffffff;
 }
 
 // 停止方块

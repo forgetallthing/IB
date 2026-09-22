@@ -219,7 +219,7 @@ function handleVoiceText(text: string, isFinal: boolean) {
   }
 }
 
-const { connected: voiceConnected } = useVoiceStream(handleVoiceText);
+const { active: voiceActive } = useVoiceStream(handleVoiceText);
 
 async function drawQuestion(excludeId?: string) {
   loading.value = true;
@@ -447,7 +447,7 @@ onBeforeUnmount(() => {
         <section class="panel side input-side">
           <p class="side-label">
             我的作答
-            <span v-if="voiceConnected" class="voice-badge"><i></i>手机语音输入中</span>
+            <span v-if="voiceActive" class="voice-badge"><i></i>手机语音输入中</span>
           </p>
           <div ref="myEditorRef" class="my-editor"></div>
         </section>

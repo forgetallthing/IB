@@ -20,10 +20,13 @@ type OnlineState = 'checking' | 'on' | 'off';
 
 function loadPlugin(): any {
   try {
-    const requirePlugin = (Taro as any).requirePlugin;
+    // requirePlugin 由小程序运行时注入到模块作用域（非 globalThis 属性），
+    // Taro 类型里的 Taro.requirePlugin 无运行时实现，必须直接调用裸标识符
+    // @ts-ignore 运行时注入的插件加载函数
     if (typeof requirePlugin === 'function') return requirePlugin('WechatSI');
     const g = globalThis as any;
     if (typeof g.requirePlugin === 'function') return g.requirePlugin('WechatSI');
+    console.error('[Voice] requirePlugin 不存在，当前环境无法加载同声传译插件');
   } catch (error) {
     console.error('[Voice] 同声传译插件加载失败:', error);
   }
@@ -112,9 +115,21 @@ const VoicePage: React.FC = () => {
 
     const manager = plugin.getRecordRecognitionManager();
 
-    manager.onRecognize((res: any) => {
+    // 同传插件回调为「属性赋值」式（官方文档：manager.onRecognize = fn）。
+    // manager 预置的同名属性是默认空操作函数，插件内部直接调用当前属性派发事件；
+    // 因此必须覆盖属性，不能把默认函数当注册方法调用（onResult 则完全不存在）。
+    const bind = (key: string, fn: (res: any) => void) => {
+      manager[key] = fn;
+    };
+
+    bind('onStart', (res: any) => {
+      console.log('[Voice] onStart:', res);
+    });
+
+    bind('onRecognize', (res: any) => {
       const text = String(res?.result ?? '');
       if (!text || !recordingRef.current) return;
+      console.log('[Voice] partial:', text);
       setPartial(text);
       const now = Date.now();
       if (now - lastSentRef.current >= PARTIAL_INTERVAL) {
@@ -123,15 +138,14 @@ const VoicePage: React.FC = () => {
       }
     });
 
-    manager.onResult((res: any) => {
+    bind('onStop', (res: any) => {
+      // 一段录音结束：最终识别文本在 res.result，无论是否续录都先落段
       const text = String(res?.result ?? '').trim();
-      if (!text) return;
-      setPartial('');
-      setSegments((prev) => [...prev, text]);
-      push(text, true);
-    });
-
-    manager.onStop(() => {
+      if (text) {
+        setPartial('');
+        setSegments((prev) => [...prev, text]);
+        push(text, true);
+      }
       if (recordingRef.current && !userStopRef.current && segCountRef.current < MAX_SEGMENTS - 1) {
         // 单段 60s 到时：自动续录下一段，保持整段会话连续
         segCountRef.current += 1;
@@ -142,7 +156,7 @@ const VoicePage: React.FC = () => {
       finishRecording();
     });
 
-    manager.onError((res: any) => {
+    bind('onError', (res: any) => {
       console.error('[Voice] 语音识别错误:', res);
       finishRecording();
       Taro.showToast({ title: '语音识别出错，请重试', icon: 'none' });
@@ -232,9 +246,9 @@ const VoicePage: React.FC = () => {
         </Text>
       </View>
 
-      {/* 实时转写内容 */}
+      {/* 实时转写内容（历史定稿段落） */}
       <View className={styles.transcript}>
-        {segments.length === 0 && !partial && !recording && (
+        {segments.length === 0 && !recording && (
           <View className={styles.empty}>
             <Text className={styles.emptyText}>
               点按下方按钮开始录音，识别的文字会实时同步到电脑端「每日回想」的作答框。
@@ -247,9 +261,6 @@ const VoicePage: React.FC = () => {
             {seg}
           </Text>
         ))}
-        {partial ? (
-          <Text className={styles.partialText}>{partial}</Text>
-        ) : null}
       </View>
 
       {/* 底部录音按钮（固定） */}
@@ -260,12 +271,28 @@ const VoicePage: React.FC = () => {
             <Text className={styles.recTimeText}>录音中 {formatSeconds(seconds)}</Text>
           </View>
         )}
+        {recording && (
+          <View className={styles.liveCard}>
+            <Text className={partial ? styles.liveText : styles.livePlaceholder}>
+              {partial || '正在聆听…'}
+            </Text>
+          </View>
+        )}
         <View
           className={`${styles.recBtn} ${recording ? styles.recBtnActive : ''}`}
           onClick={handleToggle}
         >
           <View className={styles.recIcon}>
-            {recording ? <View className={styles.recStop} /> : <View className={styles.recMic} />}
+            {recording ? (
+              <View className={styles.recStop} />
+            ) : (
+              <View className={styles.recMic}>
+                <View className={styles.micBody} />
+                <View className={styles.micArc} />
+                <View className={styles.micStem} />
+                <View className={styles.micBase} />
+              </View>
+            )}
           </View>
         </View>
         <Text className={styles.recLabel}>{recording ? '点按结束' : '点按开始'}</Text>
