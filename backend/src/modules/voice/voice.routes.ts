@@ -13,6 +13,8 @@ interface VoiceBody {
   isFinal?: boolean;
   /** true 时不转发，仅探测该账号的 Web 端是否在线 */
   probe?: boolean;
+  /** 会话控制事件：start=小程序开始录音，stop=结束录音（不带文字） */
+  event?: 'start' | 'stop';
 }
 
 const SSE_HEADERS = {
@@ -26,6 +28,8 @@ const SSE_HEADERS = {
 export async function registerVoiceRoutes(app: FastifyInstance) {
   // userId → 该用户在 Web 端打开的每日回想 SSE 连接（多标签页支持）
   const streams = new Map<string, Set<FastifyReply>>();
+  // 当前正处于「录音输入中」的账号（Web 端中途打开页面时同步状态用）
+  const liveSessions = new Set<string>();
 
   function onlineCount(userId: string): number {
     return streams.get(userId)?.size ?? 0;
@@ -70,6 +74,11 @@ export async function registerVoiceRoutes(app: FastifyInstance) {
     set.add(reply);
     streams.set(userId, set);
 
+    // 同步当前录音状态：Web 端中途打开页面时也能立刻显示/不显示「输入中」
+    reply.raw.write(
+      `data: ${JSON.stringify({ event: liveSessions.has(userId) ? 'start' : 'stop' })}\n\n`,
+    );
+
     // 心跳注释帧，防止 nginx / 浏览器空闲超时断开
     const heartbeat = setInterval(() => {
       try {
@@ -102,6 +111,14 @@ export async function registerVoiceRoutes(app: FastifyInstance) {
 
       if (body.probe) {
         return { online: onlineCount(userId) > 0, delivered: 0 };
+      }
+
+      // 录音会话控制事件：记录状态并转发，供 Web 端点亮/熄灭「输入中」
+      if (body.event === 'start' || body.event === 'stop') {
+        if (body.event === 'start') liveSessions.add(userId);
+        else liveSessions.delete(userId);
+        const delivered = sendToUser(userId, { event: body.event });
+        return { delivered };
       }
 
       const text = typeof body.text === 'string' ? body.text.trim() : '';

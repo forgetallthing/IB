@@ -8,16 +8,20 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
  * - token 通过 query 传递（EventSource 无法携带自定义请求头）
  * - 断线由 EventSource 自动重连；连续多次连不上则停止，避免死循环
  * - connected：SSE 通道是否打开（Web 端在线）
- * - active：手机端是否正在推送输入（收到片段后点亮，超时自动熄灭，
- *   避免手机端直接关闭小程序后「输入中」状态永远挂着）
+ * - active：手机端是否正在录音输入——由小程序的 start/stop 会话事件驱动，
+ *   接入时服务器会同步当前状态；长时间无帧自动熄灭（手机端异常关闭收不到 stop 的兜底）
  */
-const ACTIVE_TIMEOUT = 6000;
+const ACTIVE_TIMEOUT = 30_000;
 
-export function useVoiceStream(onText: (text: string, isFinal: boolean) => void) {
+export function useVoiceStream(
+  onText: (text: string, isFinal: boolean) => void,
+  onEvent?: (event: 'start' | 'stop') => void,
+) {
   const connected = ref(false);
   const active = ref(false);
   let source: EventSource | null = null;
   let failureCount = 0;
+  let recording = false;
   let lastActiveAt = 0;
   let activityTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -42,10 +46,22 @@ export function useVoiceStream(onText: (text: string, isFinal: boolean) => void)
     };
     source.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data) as { text?: string; isFinal?: boolean };
+        const data = JSON.parse(event.data) as {
+          text?: string;
+          isFinal?: boolean;
+          event?: 'start' | 'stop';
+        };
+        // 录音会话控制事件：精确点亮/熄灭「输入中」
+        if (data.event === 'start' || data.event === 'stop') {
+          recording = data.event === 'start';
+          lastActiveAt = Date.now();
+          active.value = recording;
+          onEvent?.(data.event);
+          return;
+        }
         if (typeof data.text === 'string' && data.text) {
           lastActiveAt = Date.now();
-          active.value = true;
+          if (recording) active.value = true;
           onText(data.text, data.isFinal === true);
         }
       } catch {

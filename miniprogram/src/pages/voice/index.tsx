@@ -100,12 +100,22 @@ const VoicePage: React.FC = () => {
     }
   }, []);
 
+  /** 推送录音会话控制事件；Web 端据此点亮/熄灭「输入中」并确定追加基底 */
+  const pushEvent = useCallback(async (event: 'start' | 'stop') => {
+    try {
+      await pushVoiceStream({ event });
+    } catch {
+      // 网络失败静默
+    }
+  }, []);
+
   const finishRecording = useCallback(() => {
     stopTimer();
     recordingRef.current = false;
     setRecording(false);
     setPartial('');
-  }, [stopTimer]);
+    pushEvent('stop');
+  }, [stopTimer, pushEvent]);
 
   // 注册同传插件回调（组件生命周期内一次）
   useEffect(() => {
@@ -127,9 +137,9 @@ const VoicePage: React.FC = () => {
     });
 
     bind('onRecognize', (res: any) => {
+      console.log('[Voice] onRecognize:', JSON.stringify(res));
       const text = String(res?.result ?? '');
       if (!text || !recordingRef.current) return;
-      console.log('[Voice] partial:', text);
       setPartial(text);
       const now = Date.now();
       if (now - lastSentRef.current >= PARTIAL_INTERVAL) {
@@ -188,7 +198,7 @@ const VoicePage: React.FC = () => {
   useDidHide(stopOnLeave);
   useUnload(stopOnLeave);
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     const manager = managerRef.current;
     if (recordingRef.current) {
       userStopRef.current = true;
@@ -209,6 +219,8 @@ const VoicePage: React.FC = () => {
     recordingRef.current = true;
     setRecording(true);
     startTimer();
+    // 先告知 Web 端进入输入状态，再开始识别，保证事件先于转写片段到达
+    await pushEvent('start');
     manager.start({ duration: 60000, lang: 'zh_CN' });
     probe();
   };
@@ -246,9 +258,9 @@ const VoicePage: React.FC = () => {
         </Text>
       </View>
 
-      {/* 实时转写内容（历史定稿段落） */}
+      {/* 实时转写内容（录音中当前句 + 历史定稿段落） */}
       <View className={styles.transcript}>
-        {segments.length === 0 && !recording && (
+        {segments.length === 0 && !partial && !recording && (
           <View className={styles.empty}>
             <Text className={styles.emptyText}>
               点按下方按钮开始录音，识别的文字会实时同步到电脑端「每日回想」的作答框。
@@ -261,6 +273,9 @@ const VoicePage: React.FC = () => {
             {seg}
           </Text>
         ))}
+        {partial ? (
+          <Text className={styles.partialText}>{partial}</Text>
+        ) : null}
       </View>
 
       {/* 底部录音按钮（固定） */}
@@ -269,13 +284,6 @@ const VoicePage: React.FC = () => {
           <View className={styles.recTime}>
             <View className={styles.recTimeDot} />
             <Text className={styles.recTimeText}>录音中 {formatSeconds(seconds)}</Text>
-          </View>
-        )}
-        {recording && (
-          <View className={styles.liveCard}>
-            <Text className={partial ? styles.liveText : styles.livePlaceholder}>
-              {partial || '正在聆听…'}
-            </Text>
           </View>
         )}
         <View

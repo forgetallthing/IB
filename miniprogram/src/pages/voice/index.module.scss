@@ -96,7 +96,7 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  padding-bottom: 420rpx; // 给底部固定录音栏（含实时字幕卡）留空间
+  padding-bottom: 320rpx; // 给底部固定录音栏留空间
 }
 
 .empty {
@@ -117,6 +117,13 @@
 .segText {
   font-size: $font-size-md;
   color: $color-text-primary;
+  line-height: $line-height-loose;
+}
+
+// 录音中当前句的中间识别结果（弱化色，整句确认后转为正文色）
+.partialText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
   line-height: $line-height-loose;
 }
 
@@ -154,34 +161,6 @@
   font-size: $font-size-xs;
   color: #e11d48;
   font-variant-numeric: tabular-nums;
-}
-
-// 录音中实时字幕卡（按钮上方，显示正在说的话）
-.liveCard {
-  width: 640rpx;
-  max-height: 200rpx;
-  box-sizing: border-box;
-  padding: $spacing-sm $spacing-md;
-  border-radius: $radius-md;
-  background: rgba(13, 148, 136, 0.08);
-  border: 1rpx solid rgba(13, 148, 136, 0.22);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow-y: scroll;
-}
-
-.liveText {
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  line-height: $line-height-loose;
-  text-align: center;
-  word-break: break-all;
-}
-
-.livePlaceholder {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
 }
 
 .recBtn {

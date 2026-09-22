@@ -198,10 +198,18 @@ function handleVoiceText(text: string, isFinal: boolean) {
   if (!myVditor || !myEditorReady) return;
   const compose = (base: string, partial: string) =>
     partial ? (base ? `${base}\n\n${partial}` : partial) : base;
+  // Vditor getValue() 对写入内容有序列化差异（如尾部换行），归一化后再比较，
+  // 否则中间结果会被误判为「用户手动编辑」而全部丢弃，只剩整句确认能写入
+  const norm = (s: string) => s.replace(/\s+/g, '');
   const expected = compose(voiceBase, voicePartial);
   const current = myVditor.getValue();
 
-  if (current === expected || current === voiceBase) {
+  if (
+    current === expected ||
+    current === voiceBase ||
+    norm(current) === norm(expected) ||
+    norm(current) === norm(voiceBase)
+  ) {
     // 编辑器内容与听写流一致（用户未手动干预）：当前句实时替换
     if (isFinal) {
       voiceBase = compose(voiceBase, text);
@@ -219,7 +227,16 @@ function handleVoiceText(text: string, isFinal: boolean) {
   }
 }
 
-const { active: voiceActive } = useVoiceStream(handleVoiceText);
+// 录音会话事件：开始=以作答框现有内容为基底（新听写追加在后）；
+// 停止=不马上改写状态，等待随后的 isFinal 整句帧把当前句落定
+function handleVoiceEvent(event: 'start' | 'stop') {
+  if (event === 'start' && myVditor && myEditorReady) {
+    voiceBase = myVditor.getValue().replace(/\s+$/, '');
+    voicePartial = '';
+  }
+}
+
+const { active: voiceActive } = useVoiceStream(handleVoiceText, handleVoiceEvent);
 
 async function drawQuestion(excludeId?: string) {
   loading.value = true;

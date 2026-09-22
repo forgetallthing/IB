@@ -225,7 +225,12 @@ export interface VoiceStreamResult {
   online?: boolean;
 }
 
-/** 推送一段语音转写文字到同账号的 Web 端每日回想页（text 省略且 probe=true 时仅探测在线状态） */
-export function pushVoiceStream(payload: { text?: string; isFinal?: boolean; probe?: boolean }) {
+/** 推送语音转写内容/会话事件到同账号的 Web 端每日回想页（probe=true 仅探测在线状态；event 为录音开始/结束控制事件） */
+export function pushVoiceStream(payload: {
+  text?: string;
+  isFinal?: boolean;
+  probe?: boolean;
+  event?: 'start' | 'stop';
+}) {
   return request<VoiceStreamResult>('voice-stream', 'POST', '/api/voice/stream', payload);
 }
