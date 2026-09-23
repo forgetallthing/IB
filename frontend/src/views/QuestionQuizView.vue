@@ -464,8 +464,16 @@ onBeforeUnmount(() => {
         <section v-if="showAnswer" class="panel side answer-side">
           <div class="side-label-row">
             <p class="side-label">参考详情</p>
-            <button type="button" class="edit-jump" title="跳转编辑本篇笔记" @click="goEdit">
-              编辑
+            <button type="button" class="icon-btn" title="跳转编辑本篇笔记" aria-label="编辑本篇笔记" @click="goEdit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
             </button>
           </div>
           <div ref="answerEl" class="md-content"></div>
@@ -521,7 +529,7 @@ onBeforeUnmount(() => {
             </p>
             <button
               type="button"
-              class="copy-btn"
+              class="icon-btn"
               title="复制题目与作答，粘贴到豆包等 AI 让它以面试官视角点评"
               aria-label="复制问答给 AI 点评"
               @click="copyForAiReview"
@@ -699,22 +707,8 @@ onBeforeUnmount(() => {
   background: none;
 }
 
-.edit-jump {
-  flex-shrink: 0;
-  padding: 3px 12px;
-  border: 1px solid rgba(13, 148, 136, 0.35);
-  border-radius: 999px;
-  background: rgba(13, 148, 136, 0.08);
-  color: #0f766e;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s ease;
-}
-
-/* 复制问答图标按钮：teal 圆形胶囊，贴在「我的作答」标签行右侧 */
-.copy-btn {
+/* 标签行通用图标按钮（编辑/复制问答）：无底色描边圆形，hover 仅描边加深 */
+.icon-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -722,20 +716,20 @@ onBeforeUnmount(() => {
   width: 24px;
   height: 24px;
   padding: 0;
-  border: 1px solid rgba(13, 148, 136, 0.35);
+  border: 1px solid rgba(100, 116, 139, 0.4);
   border-radius: 999px;
-  background: rgba(13, 148, 136, 0.08);
-  color: #0f766e;
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
-/* 覆盖全局 button:hover/:active 的 teal 实心背景与阴影，保持浅色胶囊风格 */
-.copy-btn:hover,
-.copy-btn:active {
+/* 覆盖全局 button:hover/:active 的 teal 实心背景与阴影，保持无底色 */
+.icon-btn:hover,
+.icon-btn:active {
   box-shadow: none;
-  background: rgba(13, 148, 136, 0.08);
+  background: transparent;
 }
 
 .ai-placeholder {
@@ -985,12 +979,8 @@ onBeforeUnmount(() => {
     transform: translateY(-1px);
   }
 
-  .edit-jump:hover {
-    background: rgba(13, 148, 136, 0.16);
-  }
-
-  .copy-btn:hover {
-    background: rgba(13, 148, 136, 0.16);
+  .icon-btn:hover {
+    border-color: rgba(100, 116, 139, 0.7);
   }
 }
 
