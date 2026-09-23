@@ -71,18 +71,22 @@ const items = toastState().items;
   line-height: 1.5;
 }
 
-.toast-enter-active,
+/* iOS 通知风格：从顶部弹性落入，离场轻收 */
+.toast-enter-active {
+  transition: opacity 0.24s ease, transform 0.42s var(--ease-spring);
+}
+
 .toast-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition: opacity 0.18s ease, transform 0.18s var(--ease-ios);
 }
 
 .toast-enter-from {
   opacity: 0;
-  transform: translateX(24px);
+  transform: translateY(-18px) scale(0.96);
 }
 
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-10px) scale(0.98);
 }
 </style>

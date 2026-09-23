@@ -590,7 +590,13 @@ onActivated(() => {
   border-radius: 10px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.34s var(--ease-spring);
+}
+
+/* iOS 按压反馈：按下快速微缩，松手弹簧回弹 */
+.series-row:active {
+  transform: scale(0.98);
+  transition: background 0.1s ease, border-color 0.1s ease, transform 0.1s ease-out;
 }
 
 /* 触摸屏点击后 :hover 会粘住，hover 仅限支持悬停的设备 */
@@ -810,7 +816,12 @@ onActivated(() => {
   border-radius: 10px;
   background: #fbfdfd;
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.34s var(--ease-spring);
+}
+
+.article-row:active {
+  transform: scale(0.98);
+  transition: background 0.1s ease, border-color 0.1s ease, transform 0.1s ease-out;
 }
 
 @media (hover: hover) {

@@ -415,7 +415,7 @@ h1 {
     inset: 0 auto 0 0;
     width: min(84vw, 320px);
     transform: translateX(-110%);
-    transition: transform 0.22s ease;
+    transition: transform 0.32s var(--ease-ios);
     z-index: 50;
     background: rgba(240, 248, 250, 0.97);
   }

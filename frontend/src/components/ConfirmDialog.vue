@@ -117,7 +117,7 @@ p {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.34s var(--ease-spring);
 }
 
 .btn-cancel {
@@ -169,7 +169,7 @@ p {
 }
 
 .confirm-fade-enter-active .confirm-dialog {
-  animation: confirm-pop 0.24s cubic-bezier(0.34, 1.4, 0.64, 1);
+  animation: confirm-pop 0.3s var(--ease-spring);
 }
 
 .confirm-fade-leave-active {
