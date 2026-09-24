@@ -144,6 +144,46 @@ const levelRows = computed(() => {
 
 const masteredTotal = computed(() => stats.value?.levelDist.find((item) => item.level === 0)?.count ?? 0);
 
+// ===== 数字滚动（Apple 健康风）：数据到位后从当前值缓动到目标值，统计卡依次错峰 =====
+function useCountUp(get: () => number, duration = 900, delay = 0) {
+  const display = ref(0);
+  let raf = 0;
+  let timer = 0;
+  watch(
+    get,
+    (target) => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
+      const from = display.value;
+      if (target === from) return;
+      timer = window.setTimeout(() => {
+        const start = performance.now();
+        const step = (now: number) => {
+          const t = Math.min(1, (now - start) / duration);
+          display.value = Math.round(from + (target - from) * (1 - Math.pow(1 - t, 3)));
+          if (t < 1) raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+      }, delay);
+    },
+    { immediate: true },
+  );
+  onBeforeUnmount(() => {
+    window.clearTimeout(timer);
+    cancelAnimationFrame(raf);
+  });
+  return display;
+}
+
+const todayReviews = useCountUp(() => info.value?.todayReviews ?? 0, 900, 0);
+const drawTotal = useCountUp(() => stats.value?.drawTotal ?? 0, 900, 70);
+const streak = useCountUp(() => stats.value?.streak ?? 0, 900, 140);
+const masteredCount = useCountUp(() => masteredTotal.value, 900, 210);
+const noteTotal = useCountUp(() => info.value?.noteTotal ?? 0, 900, 0);
+
+// 条形填充动画：数据渲染完成、首帧以 0% 绘制后再放量，触发 0 → 目标宽/高的过渡
+const revealed = ref(false);
+
 // 最近 7 天回想趋势（含今天），柱高按最大值归一化
 const trendRows = computed(() => {
   const map = new Map((stats.value?.calendar ?? []).map((item) => [item.date, item.count]));
@@ -265,6 +305,12 @@ watch(loading, (isLoading) => {
   void nextTick(() => {
     fitHeatmap();
     if (heatObserver && heatWrap.value) heatObserver.observe(heatWrap.value);
+    // 双 rAF 保证条形先以 0% 绘制至少一帧，再放量播放填充过渡
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        revealed.value = true;
+      });
+    });
   });
 });
 
@@ -295,19 +341,19 @@ onBeforeUnmount(() => {
       <!-- 核心统计卡 -->
       <div class="stat-cards">
         <div class="stat-card sc1">
-          <b>{{ info.todayReviews }}</b>
+          <b>{{ todayReviews }}</b>
           <span>今日回想</span>
         </div>
         <div class="stat-card sc2">
-          <b>{{ stats.drawTotal }}</b>
+          <b>{{ drawTotal }}</b>
           <span>累计回想</span>
         </div>
         <div class="stat-card sc3">
-          <b>{{ stats.streak }}</b>
+          <b>{{ streak }}</b>
           <span>连续打卡（天）</span>
         </div>
         <div class="stat-card sc4">
-          <b>{{ masteredTotal }}</b>
+          <b>{{ masteredCount }}</b>
           <span>完全掌握</span>
         </div>
       </div>
@@ -352,7 +398,7 @@ onBeforeUnmount(() => {
           <div class="dist-list">
             <div v-for="row in feedbackRows" :key="row.label" class="dist-row">
               <span class="dist-label">{{ row.label }}</span>
-              <span class="dist-track"><i class="dist-bar" :class="row.barClass" :style="{ width: row.width }"></i></span>
+              <span class="dist-track"><i class="dist-bar" :class="row.barClass" :style="{ width: revealed ? row.width : '0%' }"></i></span>
               <b class="dist-count">{{ row.count }}</b>
             </div>
           </div>
@@ -370,9 +416,9 @@ onBeforeUnmount(() => {
                   v-if="day.count"
                   class="trend-count"
                   :class="{ today: day.isToday }"
-                  :style="{ bottom: `calc(${day.height} + 4px)` }"
+                  :style="{ bottom: `calc(${revealed ? day.height : '0%'} + 4px)` }"
                 >{{ day.count }}</b>
-                <i class="trend-bar" :class="{ today: day.isToday, zero: !day.count }" :style="{ height: day.height }"></i>
+                <i class="trend-bar" :class="{ today: day.isToday, zero: !day.count }" :style="{ height: revealed ? day.height : '0%' }"></i>
               </div>
               <span class="trend-label" :class="{ today: day.isToday }">{{ day.label }}</span>
             </div>
@@ -385,7 +431,7 @@ onBeforeUnmount(() => {
           <div class="dist-list">
             <div v-for="row in levelRows" :key="row.label" class="dist-row">
               <span class="dist-label">{{ row.label }}</span>
-              <span class="dist-track"><i class="dist-bar" :class="row.barClass" :style="{ width: row.width }"></i></span>
+              <span class="dist-track"><i class="dist-bar" :class="row.barClass" :style="{ width: revealed ? row.width : '0%' }"></i></span>
               <b class="dist-count">{{ row.count }}</b>
             </div>
           </div>
@@ -398,7 +444,7 @@ onBeforeUnmount(() => {
           <div v-else class="dist-list top">
             <div v-for="row in weakRows" :key="row.tag" class="dist-row">
               <span class="dist-label">{{ row.tag }}</span>
-              <span class="dist-track"><i class="dist-bar lb-weak" :style="{ width: row.width }"></i></span>
+              <span class="dist-track"><i class="dist-bar lb-weak" :style="{ width: revealed ? row.width : '0%' }"></i></span>
               <b class="dist-count">{{ row.rate }}%</b>
             </div>
           </div>
@@ -411,7 +457,7 @@ onBeforeUnmount(() => {
           <h4>我的笔记</h4>
           <div class="note-summary">
             <div class="note-total">
-              <b>{{ info.noteTotal }}</b>
+              <b>{{ noteTotal }}</b>
               <span>笔记总数</span>
             </div>
             <div class="note-visibility">
@@ -422,7 +468,7 @@ onBeforeUnmount(() => {
           <div class="dist-list difficulty">
             <div v-for="row in difficultyRows" :key="row.label" class="dist-row">
               <span class="dist-label">{{ row.label }}</span>
-              <span class="dist-track"><i class="dist-bar" :class="row.barClass" :style="{ width: row.width }"></i></span>
+              <span class="dist-track"><i class="dist-bar" :class="row.barClass" :style="{ width: revealed ? row.width : '0%' }"></i></span>
               <b class="dist-count">{{ row.count }}</b>
             </div>
           </div>
@@ -435,7 +481,7 @@ onBeforeUnmount(() => {
           <div v-else class="dist-list">
             <div v-for="row in topTagRows" :key="row.tag" class="dist-row">
               <span class="dist-label">{{ row.tag }}</span>
-              <span class="dist-track"><i class="dist-bar tag-bar" :style="{ width: row.width }"></i></span>
+              <span class="dist-track"><i class="dist-bar tag-bar" :style="{ width: revealed ? row.width : '0%' }"></i></span>
               <b class="dist-count">{{ row.count }}</b>
             </div>
           </div>
@@ -728,6 +774,8 @@ onBeforeUnmount(() => {
   display: block;
   height: 100%;
   border-radius: 999px;
+  /* 首次进入看板的填充动画：0% → 目标宽度（revealed 置位后） */
+  transition: width 0.7s var(--ease-ios);
 }
 
 /* 自评反馈分布 */
@@ -821,6 +869,8 @@ onBeforeUnmount(() => {
   line-height: 1;
   color: var(--muted);
   white-space: nowrap;
+  /* 与柱子同步升起：bottom 随 revealed 放量过渡 */
+  transition: bottom 0.7s var(--ease-ios);
 }
 
 .trend-count.today {
@@ -834,7 +884,7 @@ onBeforeUnmount(() => {
   max-width: 20px;
   border-radius: 999px;
   background: linear-gradient(180deg, #2dd4bf, #0d9488);
-  transition: height 0.3s ease;
+  transition: height 0.7s var(--ease-ios);
 }
 
 .trend-bar.today {

@@ -748,7 +748,7 @@ watch([query, searchField, difficulty, visibility, type, tag], () => {
 .collapse {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.26s ease;
+  transition: grid-template-rows 0.3s var(--ease-ios);
 }
 
 .collapse.open {
