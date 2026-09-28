@@ -568,13 +568,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* 覆盖全局 .page：整页占满可视高度（扣除工具栏 60 + app-main 上下 padding 20+40），页面自身不滚动 */
+/* 与其他页面（如系列笔记）一致：不锁定视口，内容自然流动，由 app-main 统一滚动
+   （滚动条贴窗口最右缘、可滚到最底，底部始终保留 40px 内边距）；
+   min-height 仅保证内容不足一屏时作答区仍撑满可视高度 */
 .page {
-  height: calc(100dvh - 120px);
+  min-height: calc(100dvh - 120px);
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 0;
 }
 
 .question-card {
@@ -824,6 +825,9 @@ onBeforeUnmount(() => {
     order: 0;
     grid-column: 1;
     grid-row: 1 / -1;
+    /* 右侧 AI/详情内容过长把网格撑高时，作答列最多一屏高（面板内滚动），
+       正常情况（网格仅 70dvh 基准高度）不受此限制 */
+    max-height: calc(100dvh - 120px);
   }
 
   .ai-side {

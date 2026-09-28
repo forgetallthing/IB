@@ -346,10 +346,7 @@ h1 {
   }
 }
 
-.app-main > * {
-  max-width: 1180px;
-  margin-inline: auto;
-}
+/* 内容区自适应屏幕宽度，不做居中限宽 */
 
 @media (max-width: 1120px) {
   .app-shell {

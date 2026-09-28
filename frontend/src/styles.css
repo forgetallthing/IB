@@ -118,15 +118,13 @@ body {
 }
 
 /* ---------- 固定顶部工具栏内的页头 ----------
-   页头经 Teleport 渲染到工具栏行，脱离了 .app-main > * 的 1180px 居中规则，
-   在此恢复与内容列一致的对齐；工具栏行本身仍拉满内容区全宽 */
+   页头经 Teleport 渲染到工具栏行，脱离 .app-main，仅用 padding-inline 与
+   内容区（32px 侧边距）对齐；工具栏行与内容区均自适应屏幕全宽 */
 
 .page-toolbar-row .page-header {
   flex: 1;
   min-width: 0;
   width: 100%;
-  max-width: 1180px;
-  margin-inline: auto;
   padding-inline: 32px;
   flex-wrap: nowrap;
 }
