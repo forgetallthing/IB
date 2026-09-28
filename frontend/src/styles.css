@@ -48,6 +48,40 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ---------- 全局滚动条 ----------
+   替换 Windows 原生宽滚动条（宽、带箭头、灰色块），统一为细圆角冷灰风格；
+   Chrome/Edge/Safari 走 ::-webkit-scrollbar（可圆角），Firefox 走标准属性 */
+
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 999px;
+  }
+}
+
+@media (hover: hover) {
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.55);
+  }
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  }
+}
+
 /* ---------- 页面骨架 ---------- */
 
 /* markdown 正文链接统一主题色（Vditor.preview 渲染：详情/列表摘要/回想等所有页面） */
